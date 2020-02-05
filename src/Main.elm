@@ -22,6 +22,7 @@ import Subject exposing (..)
 import NewReviewForm exposing (..)
 import Url
 import Url.Parser as UrlP exposing ((</>))
+import Types exposing (..)
 
 type alias Model =
   { reviews : Maybe (List Review)
@@ -34,21 +35,6 @@ type alias Model =
   , url : Url.Url
   }
 
-type Msg
-  = GotReviews (Result Http.Error (List Review))
-  | NewReviewBoxTextChanged String
-  | NewReviewPostClicked
-  | GotNewReview (Result Http.Error Review)
-  | NewReviewFormStarsRadioChanged Int
-  | NewReviewFormSubjectQueryChanged String
-  | OnUsernameChanged String
-  | OnPasswordChanged String
-  | LogInPressed
-  | GotToken (Result Http.Error String)
-  | GotMe (Result Http.Error User)
-  | LinkClicked Browser.UrlRequest
-  | UrlChanged Url.Url
-
 type Route
   = UserRoute String
   | ReviewRoute String Int
@@ -56,7 +42,7 @@ type Route
   | LogInRoute
   | RootRoute
 
---port storeCache : Maybe Value -> Cmd msg
+-- port storeCache : Maybe Value -> Cmd msg
 
 init : () -> Url.Url -> Nav.Key -> (Model, Cmd Msg)
 init _ url key =
@@ -127,10 +113,7 @@ update msg model =
             (model, Nav.load href)
     UrlChanged url ->
       case url.path of
-        "/" -> case model.user of
-          Nothing -> (model, Cmd.none)
-          Just _  -> (model, Cmd.none)
-        _   -> ({ model | url = url }, Cmd.none)
+        _ -> ({ model | url = url }, Cmd.none)
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -142,18 +125,14 @@ view model =
     rootTitle : String
     rootTitle = "SongScore: "
   in
-    case model.url.path of
-      "/login" -> 
-        { title = rootTitle ++ "Login"
-        , body = htmlify <| (viewLoginPage model)
-        }
-      "/feed" ->
+    case model.user of
+      Just user ->
         { title = rootTitle ++ "Feed"
         , body = htmlify <| (viewFeedPage model)
         }
-      _ ->
-        { title = rootTitle ++ "Error"
-        , body = htmlify <| (viewErrorPage model)
+      Nothing ->
+        { title = rootTitle ++ "Login"
+        , body = htmlify <| (viewLoginPage model)
         }
 
 viewFeedPage : Model -> Element Msg

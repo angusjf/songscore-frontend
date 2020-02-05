@@ -54,14 +54,14 @@ viewReview review =
     [ row []
         [ el [] <| Element.text ("@" ++ review.user.username)
         , image []
-            { src = Maybe.withDefault "../static/default-user.png" review.user.image
+            { src = Maybe.withDefault "/assets/images/default-user.png" review.user.image
             , description = "profile picture"
             }
         ]
     , row []
         [ el [] <| Element.text review.subject.title
         , image []
-            { src = Maybe.withDefault "../static/default-subject.png" review.subject.image
+            { src = Maybe.withDefault "/assets/images/default-subject.png" review.subject.image
             , description = "subject picture"
             }
         ]

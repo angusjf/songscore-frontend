@@ -1,6 +1,6 @@
 module Pages.Login exposing (..)
 
-import Element exposing (column, text)
+import Element as E
 import Page exposing (Page)
 import Element.Input as Input
 import Browser
@@ -9,6 +9,7 @@ import Http
 import User
 import Session
 import Route
+import Styles as S
 
 type alias Model =
   { username : String
@@ -41,27 +42,24 @@ view : Model -> Page Msg
 view model = 
   { title = "Register"
   , body =
-      column []
-        [ text ""
+      E.column [ S.spacingMedium ]
+        [ E.text ""
         , Input.username []
             { onChange = UsernameChanged
             , text = model.username
-            , placeholder = Just (Input.placeholder [] (text "username"))
-            , label = Input.labelAbove [] (text "Username")
+            , placeholder = Just (Input.placeholder [] (E.text "username"))
+            , label = S.labelSmall "Username"
             }
-        , Input.newPassword []
+        , Input.currentPassword []
             { onChange = PasswordChanged
             , text = model.password
-            , placeholder = Just (Input.placeholder [] (Element.text "password"))
-            , label = Input.labelAbove [] (text "Password")
+            , placeholder = Just (Input.placeholder [] (E.text "password"))
+            , label = S.labelSmall "Password"
             , show = False
             }
-        , Input.button []
-          { onPress = Just LogInPressed
-          , label = text "Log in"
-          }
-        , column [] <|
-            List.map text model.problems
+        , S.button "Log in" (Just LogInPressed)
+        , E.column [] <|
+            List.map E.text model.problems
         ]
   }
 
@@ -71,12 +69,12 @@ update msg model =
     UsernameChanged new -> ({ model | username = new }, Cmd.none)
     PasswordChanged new -> ({ model | password = new }, Cmd.none)
     LogInPressed -> 
-      case validate model of
+      case (validate model) of
         Ok creds ->
-            ({ model | problems = [] }, Api.postUser creds Completed)
+            ({ model | problems = [] }, Api.postLogin creds Completed)
         Err problems -> ({ model | problems = problems }, Cmd.none)
     Completed result ->
-      case result of
+      case (Debug.log "got result" result) of
         Ok userAndToken ->
           let
             oldSession = model.session
@@ -85,7 +83,7 @@ update msg model =
           in
             (newModel, Route.goTo model.session.key Route.Feed)
         Err _ ->
-            (model, Cmd.none) -- TODO handle
+            ({model | password = "", problems = [ "error!" ] }, Cmd.none) -- TODO handle
 
 validate : Model -> Result (List Problem) Credentials
 validate model =

@@ -1,8 +1,10 @@
 module Widgets.Navbar exposing (..)
 
-import Element exposing (Element, row)
+import Element as E
+import Element.Background as Background
 import Element.Input as Input
 import User exposing (User)
+import Styles as S 
 
 type alias NavBar msg =
   { loggedIn : Bool
@@ -13,19 +15,18 @@ type alias NavBar msg =
   , currentUser : Maybe User
   }
 
-view : NavBar msg -> Element msg
+view : NavBar msg -> E.Element msg
 view navbar =
-  row []
-    [ Input.button []
-        { onPress = navbar.onLogoClicked
-        , label = Element.text "home"
-        }
-    , Input.button []
-        { onPress = navbar.onLoginClicked
-        , label = Element.text "Log in"
-        }
-    , Input.button []
-        { onPress = navbar.onSignupClicked
-        , label = Element.text "Sign up"
-        }
+  E.row
+    [ E.height E.shrink
+    , E.width E.fill
+    , E.spaceEvenly
+    , Background.color S.red
+    , S.paddingMedium
+    ]
+    [ S.buttonAlt "~" navbar.onLogoClicked
+    , E.row [ E.alignRight , S.spacingMedium ]
+        [ S.buttonAlt "Log in" navbar.onLoginClicked
+        , S.buttonAlt "Sign Up" navbar.onSignupClicked
+        ]
     ]

@@ -19,13 +19,13 @@ type alias Review =
   , subject : Subject
   }
 
-reviewDecoder : D.Decoder Review
-reviewDecoder =
+decoder : D.Decoder Review
+decoder =
   D.map5 Review
-    (D.field "id" (D.maybe D.int))
-    (D.field "text" (D.maybe D.string))
+    (D.maybe (D.field "id" D.int))
+    (D.maybe (D.field "text" D.string))
     (D.field "stars" D.int)
-    (D.field "user" userDecoder)
+    (D.field "user" User.decoder)
     (D.field "subject" subjectDecoder)
 
 encodeReview : Review -> E.Value
@@ -44,12 +44,12 @@ encodeReview review =
       [ ("id", id)
       , ("text", text)
       , ("stars", E.int review.stars)
-      , ("user", encodeUser review.user)
+      , ("user", encode review.user)
       , ("subject", encodeSubject review.subject)
       ]
 
-viewReview : Review -> Element msg
-viewReview review =
+view : Review -> Element msg
+view review =
   column []
     [ row []
         [ el [] <| Element.text ("@" ++ review.user.username)

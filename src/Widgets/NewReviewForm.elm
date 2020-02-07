@@ -17,21 +17,21 @@ type alias NewReviewForm msg =
   , subjectQuery : Maybe String
   , onPress : msg
   , onChange : String -> msg
-  , starsRadioChanged : Int -> msg
+  , onStarsRadioChanged : Int -> msg
   , onSubjectQueryChanged : String -> msg
   }
 
-viewNewReviewForm : NewReviewForm msg -> Element msg
-viewNewReviewForm form =
+view : NewReviewForm msg -> Element msg
+view form =
   Element.column []
-    [ viewNewReviewFormSubjectForm form
-    , viewNewReviewFormStars form
-    , viewNewReviewFormMultiline form
-    , viewNewReviewFormSubmitButton form
+    [ viewSubjectForm form
+    , viewStars form
+    , viewMultiline form
+    , viewSubmitButton form
     ]
 
-viewNewReviewFormSubjectForm : NewReviewForm msg -> Element msg
-viewNewReviewFormSubjectForm form =
+viewSubjectForm : NewReviewForm msg -> Element msg
+viewSubjectForm form =
   Input.text []
     { onChange = form.onSubjectQueryChanged
     , text = Maybe.withDefault "" form.subjectQuery
@@ -39,10 +39,10 @@ viewNewReviewFormSubjectForm form =
     , label = Input.labelAbove [] (Element.text "Subject...")
     }
 
-viewNewReviewFormStars : NewReviewForm msg -> Element msg
-viewNewReviewFormStars form =
+viewStars : NewReviewForm msg -> Element msg
+viewStars form =
   Input.radio []
-    { onChange = form.starsRadioChanged
+    { onChange = form.onStarsRadioChanged
     , selected = form.stars
     , label = Input.labelAbove [] (text "Stars")
     , options =
@@ -54,15 +54,15 @@ viewNewReviewFormStars form =
       ]
     }
 
-viewNewReviewFormSubmitButton : NewReviewForm msg -> Element msg
-viewNewReviewFormSubmitButton form =
+viewSubmitButton : NewReviewForm msg -> Element msg
+viewSubmitButton form =
   Input.button []
     { onPress = Just form.onPress
     , label = Element.text "Post!"
     }
 
-viewNewReviewFormMultiline : NewReviewForm msg -> Element msg
-viewNewReviewFormMultiline form =
+viewMultiline : NewReviewForm msg -> Element msg
+viewMultiline form =
   Input.multiline
     []
     { onChange = form.onChange
@@ -87,14 +87,14 @@ convertToNewReview form user =
         Nothing -> Nothing
     Nothing -> Nothing
 
-setReviewFormText : NewReviewForm msg -> String -> NewReviewForm msg
-setReviewFormText form text = { form | text = Just text }
+setText : NewReviewForm msg -> String -> NewReviewForm msg
+setText form text = { form | text = Just text }
 
-setReviewFormStars : NewReviewForm msg -> Int -> NewReviewForm msg
-setReviewFormStars form n = { form | stars = Just n }
+setStars : NewReviewForm msg -> Int -> NewReviewForm msg
+setStars form n = { form | stars = Just n }
 
-setReviewFormSubjectQuery : NewReviewForm msg -> String -> NewReviewForm msg
-setReviewFormSubjectQuery form query =
+setSubjectQuery : NewReviewForm msg -> String -> NewReviewForm msg
+setSubjectQuery form query =
     { form | subjectQuery = Just query,
              subject = Just {id = Nothing, image = Nothing, kind = Nothing, artist = Nothing, title = query}
     }

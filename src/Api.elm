@@ -4,9 +4,14 @@ import Http
 import Json.Encode as E
 import Json.Decode as D
 import User exposing (User)
+import Review exposing (Review)
+import Jwt.Http
 
 apiRoot : String
-apiRoot = "" -- "https://songscore.herokuapp.com"
+apiRoot =
+  case 1 of
+    0 -> "https://songscore.herokuapp.com"
+    _ -> "http://localhost:8081"
 
 type alias Credentials =
   { username : String
@@ -56,15 +61,16 @@ postLogin creds msg =
       , expect = Http.expectJson msg userAndTokenDecoder
       }
 
+getFeed : UserAndToken -> (Result Http.Error (List Review) -> msg) -> Cmd msg
+getFeed userAndToken msg =
+  Jwt.Http.get
+    userAndToken.token
+    { url = apiRoot ++ "/api/feed/" ++ (String.fromInt userAndToken.user.id)
+    , expect = Http.expectJson msg (D.list Review.decoder)
+    }
+
 {-
 
-getReviews : String -> Cmd Msg
-getReviews token =
-  Jwt.Http.get
-    token
-    { url = apiRoot ++ "/api/reviews"
-    , expect = Http.expectJson GotReviews (D.list reviewDecoder)
-    }
 
 postReview : String -> Review -> Cmd Msg
 postReview token review =

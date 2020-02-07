@@ -10,7 +10,7 @@ type Route
   | Feed
   | Login
   --| Review String Int
-  --| Root
+  | Root
   --| User String
 
 goTo : Nav.Key -> Route -> Cmd msg
@@ -23,7 +23,7 @@ routeParser =
     , map Feed     <| s "feed"
     , map Login    <| s "login"
 --    , map Review   <| s "user" </> string </> s "review" </> int
---    , map Root     <| top
+    , map Root     <| top
 --    , map User     <| s "user" </> string
     ]
 
@@ -41,4 +41,4 @@ routeToPieces route =
 --    User username -> [ "users", username ]
 --    Review username id -> [ "users", username, "reviews", String.fromInt id ]
     Login -> [ "login" ]
---    Root -> [ "" ]
+    Root -> [ "" ]

@@ -103,10 +103,14 @@ view page =
   in
     { title = title
     , body =
-      [ Element.layout [] <|
-          Element.column []
+      [ Element.layout
+        [ Element.width Element.fill ] <|
+          Element.column
+            [ Element.width (Element.maximum 1000 Element.fill)
+            , Element.centerX
+            ]
             [ Navbar.view navbar
-            , body
+            , Element.el [ Element.padding 8 ] body
             ]
       ]
     }
@@ -122,6 +126,10 @@ stepUrl url page =
       Just Route.Register -> stepRegister page (Register.init session)
       Just Route.Feed -> stepFeed page (Feed.init session)
       Just Route.Login -> stepLogin page (Login.init session)
+      Just Route.Root ->
+        case session.userAndToken of
+          Just _ -> stepFeed page (Feed.init session)
+          Nothing -> stepLogin page (Login.init session)
 
 getSession : Page -> Session.Data
 getSession page =

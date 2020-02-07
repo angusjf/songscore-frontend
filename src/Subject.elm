@@ -16,11 +16,11 @@ type SubjectKind = Album | Song
 subjectDecoder : D.Decoder Subject
 subjectDecoder =
   D.map5 Subject
-    (D.field "id" (D.maybe D.int))
-    (D.field "image" (D.maybe D.string))
-    (D.field "kind" (D.maybe subjectKindDecoder))
+    (D.maybe (D.field "id" D.int))
+    (D.maybe (D.field "image" D.string))
+    (D.maybe (D.field "kind" subjectKindDecoder))
     (D.field "title" D.string)
-    (D.field "artist" (D.maybe D.string))
+    (D.maybe (D.field "artist" D.string))
 
 subjectKindDecoder : D.Decoder SubjectKind
 subjectKindDecoder = D.succeed Song

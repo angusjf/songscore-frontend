@@ -21,3 +21,5 @@ type Msg
   | GotMe (Result Http.Error User)
   | LinkClicked Browser.UrlRequest
   | UrlChanged Url.Url
+  | SignUpPressed
+  | SignedUp (Result Http.Error User)

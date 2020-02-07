@@ -94,4 +94,7 @@ setReviewFormStars : NewReviewForm msg -> Int -> NewReviewForm msg
 setReviewFormStars form n = { form | stars = Just n }
 
 setReviewFormSubjectQuery : NewReviewForm msg -> String -> NewReviewForm msg
-setReviewFormSubjectQuery form query = { form | subjectQuery = Just query, subject = Just {id = Nothing, image = Nothing, kind = Nothing, title = query} }
+setReviewFormSubjectQuery form query =
+    { form | subjectQuery = Just query,
+             subject = Just {id = Nothing, image = Nothing, kind = Nothing, artist = Nothing, title = query}
+    }

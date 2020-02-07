@@ -9,15 +9,15 @@ type alias User =
   , username : String
   }
 
-userDecoder : D.Decoder User
-userDecoder =
+decoder : D.Decoder User
+decoder =
   D.map3 User
     (D.field "id" (D.maybe D.int))
     (D.field "image" (D.maybe D.string))
     (D.field "username" D.string)
 
-encodeUser : User -> E.Value
-encodeUser user =
+encode : User -> E.Value
+encode user =
   let
     id = case user.id of
       Just i -> E.int i

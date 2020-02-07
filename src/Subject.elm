@@ -8,17 +8,19 @@ type alias Subject =
   , image : Maybe String
   , kind : Maybe SubjectKind
   , title : String
+  , artist : Maybe String
   }
 
 type SubjectKind = Album | Song
 
 subjectDecoder : D.Decoder Subject
 subjectDecoder =
-  D.map4 Subject
+  D.map5 Subject
     (D.field "id" (D.maybe D.int))
     (D.field "image" (D.maybe D.string))
     (D.field "kind" (D.maybe subjectKindDecoder))
     (D.field "title" D.string)
+    (D.field "artist" (D.maybe D.string))
 
 subjectKindDecoder : D.Decoder SubjectKind
 subjectKindDecoder = D.succeed Song

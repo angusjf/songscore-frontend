@@ -1,4 +1,4 @@
-module NewReviewForm exposing (..)
+module Widgets.NewReviewForm exposing (..)
 
 import Review exposing (..)
 import Subject exposing (..)

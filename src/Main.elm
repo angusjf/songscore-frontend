@@ -8,6 +8,8 @@ import Pages.Register as Register
 import Pages.Login as Login
 import Pages.Feed as Feed
 import Pages.NotFound as NotFound
+import Pages.User as User
+import Pages.Review as Review
 import Session
 import Route
 import Element
@@ -19,6 +21,8 @@ type Page
   | Register Register.Model
   | Feed Feed.Model
   | Login Login.Model
+  | User User.Model
+  | Review Review.Model
 
 type Msg
   = LinkClicked Browser.UrlRequest
@@ -26,6 +30,8 @@ type Msg
   | RegisterMsg Register.Msg
   | FeedMsg Feed.Msg
   | LoginMsg Login.Msg
+  | UserMsg User.Msg
+  | ReviewMsg Review.Msg
   | None
   | NavbarLogoClicked
   | NavbarLoginClicked
@@ -58,12 +64,22 @@ update message page =
     FeedMsg msg ->
       case page of
         Feed model ->
-            stepFeed page <| Feed.update msg model
+          stepFeed page <| Feed.update msg model
         _ -> (page, Cmd.none)
     None -> (page, Cmd.none)
     NavbarLogoClicked -> (page, Route.goTo (getSession page).key Route.Feed)
     NavbarSignupClicked -> (page, Route.goTo (getSession page).key Route.Register)
     NavbarLoginClicked -> (page, Route.goTo (getSession page).key Route.Login)
+    UserMsg msg ->
+      case page of
+        User model ->
+          stepUser page <| User.update msg model
+        _ -> (page, Cmd.none)
+    ReviewMsg msg ->
+      case page of
+        Review model ->
+          stepReview page <| Review.update msg model
+        _ -> (page, Cmd.none)
 
 stepRegister : Page -> (Register.Model, Cmd Register.Msg) -> (Page, Cmd Msg)
 stepRegister model (registerModel, registerCmd) =
@@ -83,6 +99,18 @@ stepFeed model (feedModel, feedCmd) =
   , Cmd.map FeedMsg feedCmd
   )
 
+stepUser : Page -> (User.Model, Cmd User.Msg) -> (Page, Cmd Msg)
+stepUser model (userModel, userCmd) =
+  ( User userModel
+  , Cmd.map UserMsg userCmd
+  )
+
+stepReview : Page -> (Review.Model, Cmd Review.Msg) -> (Page, Cmd Msg)
+stepReview model (reviewModel, reviewCmd) =
+  ( Review reviewModel
+  , Cmd.map ReviewMsg reviewCmd
+  )
+
 view : Page -> Browser.Document Msg
 view page =
   let
@@ -92,6 +120,8 @@ view page =
         Login model -> Page.map LoginMsg (Login.view model)
         Feed model -> Page.map FeedMsg (Feed.view model)
         NotFound session -> Page.map (\_ -> None) NotFound.view
+        User model -> Page.map UserMsg (User.view model)
+        Review model -> Page.map ReviewMsg (Review.view model)
     navbar = 
       { loggedIn = False
       , onLoginClicked = Just NavbarLoginClicked
@@ -101,7 +131,7 @@ view page =
       , currentUser = Nothing
       }
   in
-    { title = title
+    { title = "SongScore: " ++ title
     , body =
       [ Element.layout
         [ Element.width Element.fill ] <|
@@ -119,9 +149,8 @@ stepUrl : Url.Url -> Page -> (Page, Cmd Msg)
 stepUrl url page =
   let
     session = getSession page
-    route = Route.fromUrl url
   in
-    case route of
+    case (Route.fromUrl url) of
       Nothing -> (NotFound session, Cmd.none)
       Just Route.Register -> stepRegister page (Register.init session)
       Just Route.Feed -> stepFeed page (Feed.init session)
@@ -130,6 +159,10 @@ stepUrl url page =
         case session.userAndToken of
           Just _ -> stepFeed page (Feed.init session)
           Nothing -> stepLogin page (Login.init session)
+      Just (Route.User username) ->
+        stepUser page (User.init session username)
+      Just (Route.Review username id) ->
+        stepReview page (Review.init session username id)
 
 getSession : Page -> Session.Data
 getSession page =
@@ -138,6 +171,8 @@ getSession page =
     Register model -> model.session
     Login model -> model.session
     Feed model -> model.session
+    User model -> model.session
+    Review model -> model.session
 
 main : Program () Page Msg
 main =

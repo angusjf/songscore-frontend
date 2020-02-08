@@ -10,6 +10,6 @@ view =
   , body =
       column []
         [ Element.text "Not Found!"
-        --, Element.link 
+        --, Element.link [] { label = Element.text "£" , url = "/users/angusjf/reviews/4" }
         ]
   }

@@ -9,9 +9,9 @@ type Route
   = Register
   | Feed
   | Login
-  --| Review String Int
+  | Review String Int
   | Root
-  --| User String
+  | User String
 
 goTo : Nav.Key -> Route -> Cmd msg
 goTo key route = Nav.pushUrl key (routeToString route)
@@ -22,9 +22,9 @@ routeParser =
     [ map Register <| s "register"
     , map Feed     <| s "feed"
     , map Login    <| s "login"
---    , map Review   <| s "user" </> string </> s "review" </> int
+    , map Review   <| s "users" </> string </> s "reviews" </> int
     , map Root     <| top
---    , map User     <| s "user" </> string
+    , map User     <| s "users" </> string
     ]
 
 fromUrl : Url -> Maybe Route
@@ -38,7 +38,7 @@ routeToPieces route =
   case route of
     Register -> [ "register" ]
     Feed -> [ "feed" ]
---    User username -> [ "users", username ]
---    Review username id -> [ "users", username, "reviews", String.fromInt id ]
+    User username -> [ "users", username ]
+    Review username id -> [ "users", username, "reviews", String.fromInt id ]
     Login -> [ "login" ]
     Root -> [ "" ]

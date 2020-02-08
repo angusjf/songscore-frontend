@@ -56,7 +56,11 @@ view review =
             { src = Maybe.withDefault "/assets/images/default-user.png" review.user.image
             , description = "profile picture"
             }
-        , el [] <| Element.text ("@" ++ review.user.username)
+        , el [] <|
+            Element.link []
+              { url = "/users/" ++ review.user.username
+              , label = Element.text ("@" ++ review.user.username)
+              }
         ]
     , column []
         [ image []

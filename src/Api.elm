@@ -9,7 +9,7 @@ import Jwt.Http
 
 apiRoot : String
 apiRoot =
-  case 2 of
+  case 1 of
     0 -> "https://songscore.herokuapp.com"
     1 -> "http://localhost:8081"
     _ -> ""
@@ -66,7 +66,7 @@ getFeed : UserAndToken -> (Result Http.Error (List Review) -> msg) -> Cmd msg
 getFeed userAndToken msg =
   Jwt.Http.get
     userAndToken.token
-    { url = apiRoot ++ "/api/feeds/" ++ (String.fromInt userAndToken.user.id)
+    { url = apiRoot ++ "/api/feeds/" ++ userAndToken.user.username
     , expect = Http.expectJson msg (D.list Review.decoder)
     }
 
@@ -79,57 +79,29 @@ postReview userAndToken review msg =
     , expect = Http.expectJson msg Review.decoder
     }
 
-{-
+maybeTokenGet : Maybe UserAndToken ->  { expect : Http.Expect msg, url : String } -> Cmd msg
+maybeTokenGet userAndToken =
+  case userAndToken of 
+    Just uAndT -> Jwt.Http.get uAndT.token
+    Nothing -> Http.get
 
-postLogin : String -> String -> Cmd Msg
-postLogin username password =
-  let
-    body =
-      Http.jsonBody <|
-      E.object <|
-        [ ("username", E.string username)
-        , ("password", E.string password)
-        ]
-  in
-    Http.post
-      { url = apiRoot ++ "/api/auth"
-      , body = body
-      , expect = Http.expectString GotToken
-      }
-
-postSignUp : String -> String -> Cmd Msg
-postSignUp username password =
-  let
-    body =
-      Http.jsonBody <|
-      E.object <|
-        [ ("username", E.string username)
-        , ("password", E.string password)
-        ]
-  in
-    Http.post
-      { url = apiRoot ++ "/api/users"
-      , body = body
-      , expect = Http.expectJson SignedUp userDecoder
-      }
-
-getMe : String -> Cmd Msg
-getMe token =
-  Jwt.Http.get
-    token
-    { url = apiRoot ++ "/api/me"
-    , expect = Http.expectJson GotMe userDecoder
+getUserReviews : Maybe UserAndToken -> User -> (Result Http.Error (List Review) -> msg) -> Cmd msg
+getUserReviews userAndToken user msg =
+  maybeTokenGet userAndToken
+    { url = apiRoot ++ "/api/users/" ++ user.username ++ "/reviews"
+    , expect = Http.expectJson msg (D.list Review.decoder)
     }
 
-emptyNewReviewForm : NewReviewForm Msg
-emptyNewReviewForm =
-  { text = Nothing
-  , stars = Nothing
-  , subject = Nothing
-  , subjectQuery = Nothing
-  , onPress = NewReviewPostClicked
-  , onChange = NewReviewBoxTextChanged
-  , starsRadioChanged = NewReviewFormStarsRadioChanged
-  , onSubjectQueryChanged = NewReviewFormSubjectQueryChanged
-  }
--}
+getReview : Maybe UserAndToken -> Int -> (Result Http.Error Review -> msg) -> Cmd msg
+getReview userAndToken id msg =
+  maybeTokenGet userAndToken
+    { url = apiRoot ++ "/api/reviews/" ++ (String.fromInt id)
+    , expect = Http.expectJson msg Review.decoder
+    }
+
+getUser : Maybe UserAndToken -> String -> (Result Http.Error User -> msg) -> Cmd msg
+getUser userAndToken username msg =
+  maybeTokenGet userAndToken
+    { url = apiRoot ++ "/api/users/" ++ username
+    , expect = Http.expectJson msg User.decoder
+    }

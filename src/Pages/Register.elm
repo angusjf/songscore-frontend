@@ -9,6 +9,7 @@ import Http
 import User
 import Session
 import Route
+import Styles as S
 
 type alias Model =
   { username : String
@@ -44,32 +45,29 @@ view : Model -> Page Msg
 view model = 
   { title = "Register"
   , body =
-      column []
+      column [ S.spacingMedium ]
         [ text ""
         , Input.username []
             { onChange = UsernameChanged
             , text = model.username
             , placeholder = Just (Input.placeholder [] (text "username"))
-            , label = Input.labelAbove [] (text "Username")
+            , label = S.labelSmall "Username"
             }
         , Input.newPassword []
             { onChange = PasswordChanged
             , text = model.password
             , placeholder = Just (Input.placeholder [] (Element.text "password"))
-            , label = Input.labelAbove [] (text "Password")
+            , label = S.labelSmall "Password"
             , show = False
             }
         , Input.newPassword []
             { onChange = PasswordRepeatChanged
             , text = model.passwordRepeat
             , placeholder = Just (Input.placeholder [] (Element.text "repeat password"))
-            , label = Input.labelAbove [] (text "Repeat Password")
+            , label = S.labelSmall "Repeat password please"
             , show = False
             }
-        , Input.button []
-          { onPress = Just SignUpPressed
-          , label = text "Sign Up"
-          }
+        , S.button "Sign Up" (Just SignUpPressed)
         , column [] <|
             List.map text model.problems
         ]

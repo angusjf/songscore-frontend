@@ -9,9 +9,10 @@ import Jwt.Http
 
 apiRoot : String
 apiRoot =
-  case 1 of
+  case 2 of
     0 -> "https://songscore.herokuapp.com"
-    _ -> "http://localhost:8081"
+    1 -> "http://localhost:8081"
+    _ -> ""
 
 type alias Credentials =
   { username : String

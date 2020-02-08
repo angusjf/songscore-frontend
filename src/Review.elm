@@ -59,11 +59,11 @@ view review =
         , el [] <| Element.text ("@" ++ review.user.username)
         ]
     , column []
-        [ el [] <| Element.text review.subject.title
-        , image []
+        [ image []
             { src = Maybe.withDefault "/assets/images/default-subject.png" review.subject.image
             , description = "subject picture"
             }
+        , el [] <| Element.text review.subject.title
         ]
     , column []
         [ el [] <| Element.text (String.fromInt review.stars ++ "/5")

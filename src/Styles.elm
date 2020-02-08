@@ -47,3 +47,5 @@ labelSmall str =
   Input.labelAbove [] (textSmall str)
 
 textSmall str = E.el [ Font.size 16 ] (E.text str)
+
+borderSmall = Border.width 3

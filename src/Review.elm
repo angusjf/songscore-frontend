@@ -2,8 +2,8 @@ module Review exposing (..)
 
 import Json.Decode as D
 import Json.Encode as E
-import Subject exposing (..)
-import User exposing (..)
+import Subject exposing (Subject)
+import User exposing (User)
 
 import Element exposing (Element, el, text, image, row, column, spacing, padding)
 import Element.Background as Background
@@ -26,10 +26,10 @@ decoder =
     (D.maybe (D.field "text" D.string))
     (D.field "stars" D.int)
     (D.field "user" User.decoder)
-    (D.field "subject" subjectDecoder)
+    (D.field "subject" Subject.decoder)
 
-encodeReview : Review -> E.Value
-encodeReview review =
+encode : Review -> E.Value
+encode review =
   let
     id =
       case review.id of
@@ -44,29 +44,30 @@ encodeReview review =
       [ ("id", id)
       , ("text", text)
       , ("stars", E.int review.stars)
-      , ("user", encode review.user)
-      , ("subject", encodeSubject review.subject)
+      , ("user", User.encode review.user)
+      , ("subject", Subject.encode review.subject)
       ]
 
 view : Review -> Element msg
 view review =
-  column []
-    [ row []
-        [ el [] <| Element.text ("@" ++ review.user.username)
-        , image []
+  row []
+    [ column []
+        [ image []
             { src = Maybe.withDefault "/assets/images/default-user.png" review.user.image
             , description = "profile picture"
             }
+        , el [] <| Element.text ("@" ++ review.user.username)
         ]
-    , row []
+    , column []
         [ el [] <| Element.text review.subject.title
         , image []
             { src = Maybe.withDefault "/assets/images/default-subject.png" review.subject.image
             , description = "subject picture"
             }
         ]
-    , row []
+    , column []
         [ el [] <| Element.text (String.fromInt review.stars ++ "/5")
         , el [] <| Element.text <|
-          Maybe.withDefault "(this review has no text)" review.text        ]
+          Maybe.withDefault "(this review has no text)" review.text
+        ]
     ]

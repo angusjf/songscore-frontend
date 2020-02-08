@@ -19,25 +19,17 @@ type alias Model =
 type Msg
   = OnSubmitPressed
   | OnSubjectChanged String
-  | OnStarsRadioChanged Int
+  | OnStarsChanged Int
   | OnSubjectQueryChanged String
   | GotFeed (Result Http.Error (List Review))
+  | GotNewReview (Result Http.Error Review)
 
 init : Session.Data -> (Model, Cmd Msg)
 init session =
   let
     model =
       { session = session
-      , newReviewForm = 
-          { text = Nothing
-          , stars = Nothing
-          , subject = Nothing
-          , subjectQuery = Nothing
-          , onPress = OnSubmitPressed
-          , onChange = OnSubjectChanged
-          , onStarsRadioChanged = OnStarsRadioChanged
-          , onSubjectQueryChanged = OnSubjectQueryChanged
-          }
+      , newReviewForm = clearReviewForm
       , reviews = Nothing
       }
   in
@@ -48,13 +40,12 @@ init session =
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of 
-    OnSubmitPressed -> (model, Cmd.none)
     OnSubjectChanged new ->
       let
         newForm = NewReviewForm.setText model.newReviewForm new
       in
         ({ model | newReviewForm = newForm }, Cmd.none)
-    OnStarsRadioChanged n ->
+    OnStarsChanged n ->
       let
         newForm = NewReviewForm.setStars model.newReviewForm n
       in
@@ -64,8 +55,29 @@ update msg model =
         newForm = NewReviewForm.setSubjectQuery model.newReviewForm new
       in
         ({ model | newReviewForm = newForm }, Cmd.none)
+    OnSubmitPressed ->
+      case model.session.userAndToken of
+        Just uAndT -> 
+          case NewReviewForm.convertToNewReview model.newReviewForm uAndT.user of
+            Just newReview -> (model, Api.postReview uAndT newReview GotNewReview)
+            Nothing -> (model, Cmd.none)
+        Nothing -> (model, Cmd.none)
+    GotNewReview result -> 
+      case result of
+        Ok review ->
+          let
+            newReviews = 
+              Just <|
+                case model.reviews of
+                  Just reviews -> review :: reviews
+                  Nothing -> [ review ]
+          in
+            ( { model | reviews = newReviews, newReviewForm = clearReviewForm }
+            , Cmd.none
+            )
+        Err _ -> (model, Cmd.none)
     GotFeed result ->
-      case result of 
+      case (Debug.log ">>>>>>" result) of 
         Ok reviews -> ({ model | reviews = Just reviews}, Cmd.none)
         Err _ -> (model, Cmd.none)
 
@@ -80,4 +92,16 @@ view model =
               column [] <| map Review.view reviews
             Nothing -> text "loading..."
         ]
+  }
+
+clearReviewForm : NewReviewForm Msg
+clearReviewForm = 
+  { text = Nothing
+  , stars = Nothing
+  , subject = Nothing
+  , subjectQuery = Nothing
+  , onPress = OnSubmitPressed
+  , onChange = OnSubjectChanged
+  , onStarsChanged = OnStarsChanged
+  , onSubjectQueryChanged = OnSubjectQueryChanged
   }

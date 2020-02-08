@@ -4,11 +4,12 @@ import Review exposing (..)
 import Subject exposing (..)
 import User exposing (..)
 
-import Element exposing (Element, el, text, row, column, alignRight, fill, width, rgb255, spacing, centerY, padding)
+import Element as E exposing (Element)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
+import Styles as S
 
 type alias NewReviewForm msg =
   { text : Maybe String
@@ -17,14 +18,15 @@ type alias NewReviewForm msg =
   , subjectQuery : Maybe String
   , onPress : msg
   , onChange : String -> msg
-  , onStarsRadioChanged : Int -> msg
+  , onStarsChanged : Int -> msg
   , onSubjectQueryChanged : String -> msg
   }
 
 view : NewReviewForm msg -> Element msg
 view form =
-  Element.column []
-    [ viewSubjectForm form
+  E.column [S.roundedSmall, Border.color S.red, S.borderSmall, S.paddingSmall]
+    [ E.text "Write a Review!"
+    , viewSubjectForm form
     , viewStars form
     , viewMultiline form
     , viewSubmitButton form
@@ -35,16 +37,17 @@ viewSubjectForm form =
   Input.text []
     { onChange = form.onSubjectQueryChanged
     , text = Maybe.withDefault "" form.subjectQuery
-    , placeholder = Just (Input.placeholder [] (Element.text "search for a subect"))
-    , label = Input.labelAbove [] (Element.text "Subject...")
+    , placeholder = Just (Input.placeholder [] (E.text "search for a subject"))
+    , label = Input.labelAbove [] (E.text "Subject...")
     }
 
+{-
 viewStars : NewReviewForm msg -> Element msg
 viewStars form =
   Input.radio []
-    { onChange = form.onStarsRadioChanged
+    { onChange = form.onStarsChanged
     , selected = form.stars
-    , label = Input.labelAbove [] (text "Stars")
+    , label = Input.labelAbove [] (E.text "Stars")
     , options =
       [ Input.option 1 (text "1")
       , Input.option 2 (text "2")
@@ -53,12 +56,45 @@ viewStars form =
       , Input.option 5 (text "5")
       ]
     }
+-}
+
+viewStars : NewReviewForm msg -> Element msg
+viewStars form = 
+  case form.stars of 
+    Just n ->
+      E.row [] <| 
+        List.map2 (\f x -> f (form.onStarsChanged x))
+          ((List.repeat n redStar) ++ (List.repeat (5 - n) greyStar)) [1, 2, 3, 4, 5]
+    Nothing ->
+      E.row [] <| 
+        List.map2 (\f x -> f (form.onStarsChanged x))
+          (List.repeat 5 greyStar) [1, 2, 3, 4, 5]
+
+redStar : msg -> Element msg
+redStar msg =
+  Input.button []
+    { onPress = Just msg
+    , label = 
+        E.image []
+          { src = "/assets/images/red-star.png"
+          , description = "red star" }
+    }
+
+greyStar : msg -> Element msg
+greyStar msg =
+  Input.button []
+    { onPress = Just msg
+    , label = 
+        E.image []
+          { src = "/assets/images/grey-star.png"
+          , description = "grey star" }
+    }
 
 viewSubmitButton : NewReviewForm msg -> Element msg
 viewSubmitButton form =
   Input.button []
     { onPress = Just form.onPress
-    , label = Element.text "Post!"
+    , label = E.text "Post!"
     }
 
 viewMultiline : NewReviewForm msg -> Element msg
@@ -67,8 +103,8 @@ viewMultiline form =
     []
     { onChange = form.onChange
     , text = Maybe.withDefault "" form.text
-    , placeholder = Just (Input.placeholder [] (Element.text "type your review here!"))
-    , label = Input.labelAbove [] (Element.text "Review text")
+    , placeholder = Just (Input.placeholder [] (E.text "type your review here!"))
+    , label = Input.labelAbove [] (E.text "Review text")
     , spellcheck = True
     }
 

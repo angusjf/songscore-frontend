@@ -13,8 +13,8 @@ type alias Subject =
 
 type SubjectKind = Album | Song
 
-subjectDecoder : D.Decoder Subject
-subjectDecoder =
+decoder : D.Decoder Subject
+decoder =
   D.map5 Subject
     (D.maybe (D.field "id" D.int))
     (D.maybe (D.field "image" D.string))
@@ -25,8 +25,8 @@ subjectDecoder =
 subjectKindDecoder : D.Decoder SubjectKind
 subjectKindDecoder = D.succeed Song
 
-encodeSubject : Subject -> E.Value
-encodeSubject subject =
+encode : Subject -> E.Value
+encode subject =
   let
     id = case subject.id of
       Just i -> E.int i

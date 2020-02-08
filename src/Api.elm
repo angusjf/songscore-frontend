@@ -65,21 +65,20 @@ getFeed : UserAndToken -> (Result Http.Error (List Review) -> msg) -> Cmd msg
 getFeed userAndToken msg =
   Jwt.Http.get
     userAndToken.token
-    { url = apiRoot ++ "/api/feed/" ++ (String.fromInt userAndToken.user.id)
+    { url = apiRoot ++ "/api/feeds/" ++ (String.fromInt userAndToken.user.id)
     , expect = Http.expectJson msg (D.list Review.decoder)
     }
 
-{-
-
-
-postReview : String -> Review -> Cmd Msg
-postReview token review =
+postReview : UserAndToken -> Review -> (Result Http.Error Review -> msg) -> Cmd msg
+postReview userAndToken review msg =
   Jwt.Http.post
-    token
+    userAndToken.token
     { url = apiRoot ++ "/api/reviews"
-    , body = Http.jsonBody (encodeReview review)
-    , expect = Http.expectJson GotNewReview reviewDecoder
+    , body = Http.jsonBody (Review.encode review)
+    , expect = Http.expectJson msg Review.decoder
     }
+
+{-
 
 postLogin : String -> String -> Cmd Msg
 postLogin username password =

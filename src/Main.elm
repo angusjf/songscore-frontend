@@ -32,10 +32,8 @@ type Msg
   | LoginMsg Login.Msg
   | UserMsg User.Msg
   | ReviewMsg Review.Msg
+  | NavbarMsg Navbar.Msg
   | None
-  | NavbarLogoClicked
-  | NavbarLoginClicked
-  | NavbarSignupClicked
 
 init : () -> Url.Url -> Nav.Key -> (Page, Cmd Msg)
 init _ url key = stepUrl url (NotFound (Session.fromNavKey key))
@@ -67,9 +65,6 @@ update message page =
           stepFeed page <| Feed.update msg model
         _ -> (page, Cmd.none)
     None -> (page, Cmd.none)
-    NavbarLogoClicked -> (page, Route.goTo (getSession page).key Route.Feed)
-    NavbarSignupClicked -> (page, Route.goTo (getSession page).key Route.Register)
-    NavbarLoginClicked -> (page, Route.goTo (getSession page).key Route.Login)
     UserMsg msg ->
       case page of
         User model ->
@@ -80,6 +75,8 @@ update message page =
         Review model ->
           stepReview page <| Review.update msg model
         _ -> (page, Cmd.none)
+    NavbarMsg msg ->
+      (page, Navbar.update msg (getSession page))
 
 stepRegister : Page -> (Register.Model, Cmd Register.Msg) -> (Page, Cmd Msg)
 stepRegister model (registerModel, registerCmd) =
@@ -122,14 +119,7 @@ view page =
         NotFound session -> Page.map (\_ -> None) NotFound.view
         User model -> Page.map UserMsg (User.view model)
         Review model -> Page.map ReviewMsg (Review.view model)
-    navbar = 
-      { loggedIn = False
-      , onLoginClicked = Just NavbarLoginClicked
-      , onSignupClicked = Just NavbarSignupClicked
-      , onUserClicked = Nothing
-      , onLogoClicked = Just NavbarLogoClicked
-      , currentUser = Nothing
-      }
+    navbar = ()
   in
     { title = "SongScore: " ++ title
     , body =
@@ -139,7 +129,7 @@ view page =
             [ Element.width (Element.maximum 1000 Element.fill)
             , Element.centerX
             ]
-            [ Navbar.view navbar
+            [ Navbar.view NavbarMsg (Maybe.map .user (getSession page).userAndToken)
             , Element.el [ Element.padding 8 ] body
             ]
       ]

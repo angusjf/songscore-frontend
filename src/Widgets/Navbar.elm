@@ -5,18 +5,32 @@ import Element.Background as Background
 import Element.Input as Input
 import User exposing (User)
 import Styles as S 
+import Element.Font as Font
+import Route
+import Session
 
-type alias NavBar msg =
-  { loggedIn : Bool
-  , onLoginClicked : Maybe msg
-  , onSignupClicked : Maybe msg
-  , onUserClicked : Maybe msg
-  , onLogoClicked : Maybe msg
-  , currentUser : Maybe User
-  }
+type Msg
+ = OnLogoClicked
+ | OnLoginClicked
+ | OnSignupClicked
+ | OnUserClicked
 
-view : NavBar msg -> E.Element msg
-view navbar =
+update : Msg -> Session.Data -> Cmd msg
+update msg session =
+  case msg of
+    OnLogoClicked ->
+      Route.goTo session.key Route.Feed
+    OnSignupClicked ->
+      Route.goTo session.key Route.Register
+    OnLoginClicked ->
+      Route.goTo session.key Route.Login
+    OnUserClicked ->
+      case session.userAndToken of
+        Just uAndT -> Route.goTo session.key (Route.User uAndT.user.username)
+        Nothing -> Cmd.none
+
+view : (Msg -> msg) -> Maybe User -> E.Element msg
+view toOuter maybeUser =
   E.row
     [ E.height E.shrink
     , E.width E.fill
@@ -24,9 +38,34 @@ view navbar =
     , Background.color S.red
     , S.paddingMixedMedium
     ]
-    [ S.buttonAlt "Home" navbar.onLogoClicked
-    , E.row [ E.alignRight , S.spacingMedium ]
-        [ S.buttonAlt "Log in" navbar.onLoginClicked
-        , S.buttonAlt "Sign Up" navbar.onSignupClicked
-        ]
+    [ S.buttonAlt "Home" <| Just <| toOuter OnLogoClicked
+    , case maybeUser of
+        Just user ->
+          Input.button
+            [ E.alignRight
+            , S.spacingMedium
+            , Background.color S.white
+            , Font.color S.red
+            , Font.bold
+            , S.paddingSmall
+            , S.roundedSmall
+            ]
+            { onPress = Just <| toOuter OnUserClicked
+            , label = 
+                case user.image of
+                  Just image ->
+                    E.row [S.spacingSmall]
+                      [ E.image [ E.width (E.px 32) ]
+                          { src = image
+                          , description = "profile picture"
+                          }
+                      , S.text user.username
+                      ]
+                  Nothing -> S.text user.username
+            }
+        Nothing ->
+          E.row [ E.alignRight , S.spacingMedium ]
+            [ S.buttonAlt "Log in" <| Just <| toOuter OnLoginClicked
+            , S.buttonAlt "Sign Up" <| Just <| toOuter OnSignupClicked
+            ]
     ]

@@ -8,16 +8,20 @@ import Element.Font as Font
 
 red = E.rgb 1.0 0.4 0.4
 white = E.rgb 1.0 1.0 1.0
+veryLightAlpha = E.rgba 0 0 0 0.1
 
 roundedSmall = Border.rounded 8
 
-paddingSmall = E.paddingXY 8 4
-paddingMedium = E.paddingXY 16 8
+paddingMixedSmall = E.paddingXY 8 4
+paddingMixedMedium = E.paddingXY 16 8
 
+paddingSmall = E.paddingXY 8 8
+paddingMedium = E.paddingXY 16 16
+spacingSmall = E.spacing 4
 spacingMedium = E.spacing 16
 
-text str = E.el [] <| E.text str
-textAlt str = E.el [ Font.color white, Font.bold ] <| E.text str
+text str = E.el [ Font.size 16 ] <| E.text str
+textAlt str = E.el [ Font.size 16, Font.color white, Font.bold ] <| E.text str
 
 button str action =
   Input.button
@@ -54,6 +58,20 @@ squareMedium =
 --  [ E.width (E.maximum 200 E.fill)
 --  , E.height (E.maximum 200 E.fill)
 --  ]
-  [ E.width (px 200)
-  , E.height (px 200)
+  [ E.width (px 140)
+  , E.height (px 140)
   ]
+
+circleSmall = 
+  [ E.width (px 70)
+  , E.height (px 70)
+  , Border.rounded 140
+  ]
+
+lightShadow =
+  Border.shadow
+    { offset = (0, 0)
+    , size = 0
+    , blur = 15
+    , color = veryLightAlpha
+    }

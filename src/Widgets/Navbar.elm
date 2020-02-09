@@ -22,9 +22,9 @@ view navbar =
     , E.width E.fill
     , E.spaceEvenly
     , Background.color S.red
-    , S.paddingMedium
+    , S.paddingMixedMedium
     ]
-    [ S.buttonAlt "~" navbar.onLogoClicked
+    [ S.buttonAlt "Home" navbar.onLogoClicked
     , E.row [ E.alignRight , S.spacingMedium ]
         [ S.buttonAlt "Log in" navbar.onLoginClicked
         , S.buttonAlt "Sign Up" navbar.onSignupClicked

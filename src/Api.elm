@@ -9,7 +9,7 @@ import Jwt.Http
 
 apiRoot : String
 apiRoot =
-  case 1 of
+  case 2 of
     0 -> "https://songscore.herokuapp.com"
     1 -> "http://localhost:8081"
     _ -> ""

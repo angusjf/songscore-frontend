@@ -11,6 +11,7 @@ import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Styles as S
+import Browser
 
 type alias Review =
   { id : Maybe Int
@@ -51,47 +52,75 @@ encode review =
 
 view : Review -> Element msg
 view review =
-  E.row [S.spacingMedium]
-    [ E.link []
-        { url = "/users/" ++ review.user.username
-        , label =
-            E.column []
-            [ E.image S.squareMedium
-                { src = Maybe.withDefault "/assets/images/default-user.png" review.user.image
-                , description = "profile picture"
-                }
-            , E.text ("@" ++ review.user.username)
-            ]
-        }
-    , E.column []
+  E.row [S.spacingMedium, S.lightShadow, S.paddingMedium]
+    [ E.column [S.spacingMedium] 
         [ E.image S.squareMedium
             { src = Maybe.withDefault "/assets/images/default-subject.png" review.subject.image
             , description = "subject picture"
             }
-        , E.el [] <| E.text review.subject.title
+        , E.column [] <|
+            [ S.text <| Maybe.withDefault "" review.subject.artist
+            , S.text review.subject.title
+            ]
         ]
-    , E.column []
-        [ E.el [] <| viewNStars review.stars
-        , E.el [] <| E.text <|
-             Maybe.withDefault "(this review has no text)" review.text
+    , E.column [S.spacingMedium] 
+        [ E.link []
+          { url = "/users/" ++ review.user.username
+          , label =
+              E.row []
+                [ E.image S.circleSmall
+                    { src = Maybe.withDefault "/assets/images/default-user.png" review.user.image
+                    , description = "profile picture"
+                    }
+                , S.text ("@" ++ review.user.username)
+                ]
+          }
+        , E.column [S.spacingMedium]
+            [ viewNStars review.stars
+            , E.el [] <| S.text <|
+                 Maybe.withDefault "(this review has no text)" review.text
+            ]
         ]
     ]
  
 viewNStars : Int -> Element msg
 viewNStars n =
-  E.row [] <|
+  E.row [S.spacingSmall] <|
     (List.repeat n redStar) ++ (List.repeat (5 - n) greyStar)
 
 redStar : Element msg
 redStar =
-  E.image []
+  E.image [E.width (E.px 72) , E.height (E.px 72)]
     { src = "/assets/images/red-star.png"
     , description = "red star"
     }
 
 greyStar : Element msg
 greyStar =
-  E.image []
+  E.image [E.width (E.px 72) , E.height (E.px 72)]
     { src = "/assets/images/grey-star.png"
     , description = "grey star"
+    }
+
+main =
+  Browser.sandbox
+    { init =
+      { id = Nothing
+      , text = Just "cool album"
+      , stars = 1
+      , user =
+          { id = 0
+          , image = Nothing
+          , username = "angus"
+          }
+      , subject =
+          { id = Nothing
+          , image = Nothing
+          , kind = Nothing
+          , title = "Song name!"
+          , artist = Nothing
+          }
+      }
+    , view = \model -> E.layout [S.paddingMedium] <| view model
+    , update = \msg model -> model
     }

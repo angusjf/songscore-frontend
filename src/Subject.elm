@@ -18,12 +18,19 @@ decoder =
   D.map5 Subject
     (D.maybe (D.field "id" D.int))
     (D.maybe (D.field "image" D.string))
-    (D.maybe (D.field "kind" subjectKindDecoder))
+    (D.field "kind" subjectKindDecoder)
     (D.field "title" D.string)
     (D.maybe (D.field "artist" D.string))
 
-subjectKindDecoder : D.Decoder SubjectKind
-subjectKindDecoder = D.succeed Song
+subjectKindDecoder : D.Decoder (Maybe SubjectKind)
+subjectKindDecoder = D.map toSubjectKind D.string
+
+toSubjectKind : String -> Maybe SubjectKind
+toSubjectKind kind =
+  case kind of
+    "Album" -> Just Album
+    "Song" -> Just Song
+    _ -> Nothing
 
 encode : Subject -> E.Value
 encode subject =
@@ -38,10 +45,14 @@ encode subject =
       Just Album -> E.string "Album"
       Just Song -> E.string "Song"
       Nothing -> E.null
+    artist = case subject.artist of
+      Just a -> E.string a
+      Nothing -> E.null
   in
     E.object
       [ ("id", id)
       , ("image", image)
       , ("kind", kind)
       , ("title", E.string subject.title)
+      , ("artist", artist)
       ]

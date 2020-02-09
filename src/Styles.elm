@@ -1,6 +1,6 @@
 module Styles exposing (..)
 
-import Element as E
+import Element as E exposing (Element, px)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Input as Input
@@ -49,3 +49,5 @@ labelSmall str =
 textSmall str = E.el [ Font.size 16 ] (E.text str)
 
 borderSmall = Border.width 3
+
+mediumSquare = [ E.width (E.maximum 200 E.fill) , E.height (E.maximum 200 E.fill) ]

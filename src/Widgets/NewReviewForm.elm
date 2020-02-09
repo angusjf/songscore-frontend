@@ -10,19 +10,114 @@ import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Styles as S
+import MusicDatabase as MDB
+import Http
 
-type alias NewReviewForm msg =
+type Msg
+  = OnTextChanged String
+  | OnStarsChanged Int
+  | OnSubjectQueryChanged String
+  | GotAlbumResults (Result Http.Error (List MDB.Album))
+  | GotSongResults (Result Http.Error (List MDB.Song))
+  | OnAlbumResultClicked MDB.Album
+  | OnSongResultClicked MDB.Song
+
+type alias Form msg =
   { text : Maybe String
   , stars : Maybe Int
   , subject : Maybe Subject
-  , subjectQuery : Maybe String
+  , subjectQuery : String
+  , albumResults : List MDB.Album
+  , songResults : List MDB.Song
   , onPress : msg
-  , onChange : String -> msg
-  , onStarsChanged : Int -> msg
-  , onSubjectQueryChanged : String -> msg
+  , toOuterMsg : Msg -> msg
   }
 
-view : NewReviewForm msg -> Element msg
+resultsLimit = 2
+minSearchLength = 2
+
+init : (Msg -> msg) -> msg -> Form msg
+init toOuterMsg onPress = 
+  { text = Nothing
+  , stars = Nothing
+  , subject = Nothing
+  , subjectQuery = ""
+  , albumResults = []
+  , songResults = []
+  , onPress = onPress
+  , toOuterMsg = toOuterMsg
+  }
+
+update : Form msg -> Msg -> (Form msg, Cmd msg)
+update model msg =
+  case msg of
+    OnTextChanged new ->
+      ({ model | text = Just new }, Cmd.none)
+    OnStarsChanged n ->
+      ({ model | stars = Just n }, Cmd.none)
+    OnSubjectQueryChanged new ->
+          if String.length model.subjectQuery < minSearchLength
+            then ( { model
+                     | subjectQuery = new
+                     , songResults = []
+                     , albumResults = []
+                   }
+                 , Cmd.none
+                 )
+            else ( { model | subjectQuery = new }
+                 , Cmd.batch
+                     [ MDB.searchAlbums model.subjectQuery resultsLimit <|
+                         \x -> model.toOuterMsg (GotAlbumResults x)
+                     , MDB.searchSongs model.subjectQuery resultsLimit <|
+                         \x -> model.toOuterMsg (GotSongResults x)
+                     ]
+                 )
+    GotAlbumResults res ->
+      case res of
+        Ok results -> ({ model | albumResults = results }, Cmd.none)
+        Err results -> (model, Cmd.none) 
+    GotSongResults res ->
+      case res of
+        Ok results -> ({ model | songResults = results }, Cmd.none)
+        Err results -> (model, Cmd.none) 
+    OnAlbumResultClicked album ->
+      ({ model
+         | subject = Just (albumResultToSubject album)
+         , albumResults = []
+         , songResults = []
+         , subjectQuery = album.name ++ " " ++ album.artist
+       }
+      , Cmd.none
+      )
+    OnSongResultClicked song ->
+      ({ model
+         | subject = Just (songResultToSubject song)
+         , albumResults = []
+         , songResults = []
+         , subjectQuery = song.name ++ " " ++ song.artist
+       }
+      , Cmd.none
+      )
+
+songResultToSubject : MDB.Song -> Subject
+songResultToSubject song =
+  { id = Nothing
+  , image = Just song.imageUrlLarge
+  , kind = Just Song
+  , title = song.name
+  , artist = Just song.artist
+  }
+
+albumResultToSubject : MDB.Album -> Subject
+albumResultToSubject song =
+  { id = Nothing
+  , image = Just song.imageUrlLarge
+  , kind = Just Album
+  , title = song.name
+  , artist = Just song.artist
+  }
+
+view : Form msg -> Element msg
 view form =
   E.column [S.roundedSmall, Border.color S.red, S.borderSmall, S.paddingSmall]
     [ E.text "Write a Review!"
@@ -32,42 +127,61 @@ view form =
     , viewSubmitButton form
     ]
 
-viewSubjectForm : NewReviewForm msg -> Element msg
+viewSubjectForm : Form msg -> Element msg
 viewSubjectForm form =
-  Input.text []
-    { onChange = form.onSubjectQueryChanged
-    , text = Maybe.withDefault "" form.subjectQuery
-    , placeholder = Just (Input.placeholder [] (E.text "search for a subject"))
-    , label = Input.labelAbove [] (E.text "Subject...")
+  E.column [S.paddingSmall]
+    [ Input.text []
+        { onChange = \s -> form.toOuterMsg (OnSubjectQueryChanged s)
+        , text = form.subjectQuery
+        , placeholder = Just (Input.placeholder [] (E.text "search for a subject"))
+        , label = Input.labelAbove [] (E.text "Subject...")
+        }
+    , E.row []
+        [ E.column [S.paddingSmall] <|
+            List.map (viewAlbumResults form.toOuterMsg) form.albumResults
+        , E.column [S.paddingSmall] <|
+            List.map (viewSongResults form.toOuterMsg) form.songResults
+        ]
+    ]
+
+viewAlbumResults : (Msg -> msg) -> MDB.Album -> Element msg
+viewAlbumResults toOuterMsg album =
+  Input.button []
+    { onPress = Just <| toOuterMsg (OnAlbumResultClicked album)
+    , label =
+        E.column []
+          [ E.image []
+            { src = album.imageUrlSmall
+            , description = ""
+            }
+          , E.text album.name
+          ]
     }
 
-{-
-viewStars : NewReviewForm msg -> Element msg
-viewStars form =
-  Input.radio []
-    { onChange = form.onStarsChanged
-    , selected = form.stars
-    , label = Input.labelAbove [] (E.text "Stars")
-    , options =
-      [ Input.option 1 (text "1")
-      , Input.option 2 (text "2")
-      , Input.option 3 (text "3")
-      , Input.option 4 (text "4")
-      , Input.option 5 (text "5")
-      ]
+viewSongResults : (Msg -> msg) -> MDB.Song -> Element msg
+viewSongResults toOuterMsg song =
+  Input.button []
+    { onPress = Just <| toOuterMsg (OnSongResultClicked song)
+    , label =
+        E.column []
+          [ E.image []
+            { src = song.imageUrlSmall
+            , description = ""
+            }
+          , E.text song.name
+          ]
     }
--}
 
-viewStars : NewReviewForm msg -> Element msg
+viewStars : Form msg -> Element msg
 viewStars form = 
   case form.stars of 
     Just n ->
       E.row [] <| 
-        List.map2 (\f x -> f (form.onStarsChanged x))
+        List.map2 (\f x -> f (form.toOuterMsg (OnStarsChanged x)))
           ((List.repeat n redStar) ++ (List.repeat (5 - n) greyStar)) [1, 2, 3, 4, 5]
     Nothing ->
       E.row [] <| 
-        List.map2 (\f x -> f (form.onStarsChanged x))
+        List.map2 (\f x -> f (form.toOuterMsg (OnStarsChanged x)))
           (List.repeat 5 greyStar) [1, 2, 3, 4, 5]
 
 redStar : msg -> Element msg
@@ -90,47 +204,45 @@ greyStar msg =
           , description = "grey star" }
     }
 
-viewSubmitButton : NewReviewForm msg -> Element msg
+viewSubmitButton : Form msg -> Element msg
 viewSubmitButton form =
   Input.button []
     { onPress = Just form.onPress
     , label = E.text "Post!"
     }
 
-viewMultiline : NewReviewForm msg -> Element msg
+viewMultiline : Form msg -> Element msg
 viewMultiline form =
   Input.multiline
     []
-    { onChange = form.onChange
+    { onChange = \s -> form.toOuterMsg (OnTextChanged s)
     , text = Maybe.withDefault "" form.text
     , placeholder = Just (Input.placeholder [] (E.text "type your review here!"))
     , label = Input.labelAbove [] (E.text "Review text")
     , spellcheck = True
     }
 
-convertToNewReview : NewReviewForm msg -> User -> Maybe Review
-convertToNewReview form user =
+convertToReview : Form msg -> User -> Maybe Review
+convertToReview form user =
   case form.stars of
     Just stars ->
-      case form.subject of
-        Just subject -> Just
+      let
+        subject = 
+          case form.subject of
+            Just s -> s
+            Nothing ->
+              { id = Nothing
+              , image = Nothing
+              , kind = Nothing
+              , title = form.subjectQuery
+              , artist = Nothing
+              }
+      in
+        Just
           { id = Nothing
           , text = form.text
           , stars = stars
           , user = user
           , subject = subject
           }
-        Nothing -> Nothing
     Nothing -> Nothing
-
-setText : NewReviewForm msg -> String -> NewReviewForm msg
-setText form text = { form | text = Just text }
-
-setStars : NewReviewForm msg -> Int -> NewReviewForm msg
-setStars form n = { form | stars = Just n }
-
-setSubjectQuery : NewReviewForm msg -> String -> NewReviewForm msg
-setSubjectQuery form query =
-    { form | subjectQuery = Just query,
-             subject = Just {id = Nothing, image = Nothing, kind = Nothing, artist = Nothing, title = query}
-    }

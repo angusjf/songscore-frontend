@@ -5,11 +5,12 @@ import Json.Encode as E
 import Subject exposing (Subject)
 import User exposing (User)
 
-import Element exposing (Element, el, text, image, row, column, spacing, padding)
+import Element as E exposing (Element)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
+import Styles as S
 
 type alias Review =
   { id : Maybe Int
@@ -50,28 +51,47 @@ encode review =
 
 view : Review -> Element msg
 view review =
-  row []
-    [ column []
-        [ image []
-            { src = Maybe.withDefault "/assets/images/default-user.png" review.user.image
-            , description = "profile picture"
-            }
-        , el [] <|
-            Element.link []
-              { url = "/users/" ++ review.user.username
-              , label = Element.text ("@" ++ review.user.username)
-              }
-        ]
-    , column []
-        [ image []
+  E.row []
+    [ E.link []
+        { url = "/users/" ++ review.user.username
+        , label =
+            E.column []
+            [ E.image S.mediumSquare
+                { src = Maybe.withDefault "/assets/images/default-user.png" review.user.image
+                , description = "profile picture"
+                }
+            , E.text ("@" ++ review.user.username)
+            ]
+        }
+    , E.column []
+        [ E.image S.mediumSquare
             { src = Maybe.withDefault "/assets/images/default-subject.png" review.subject.image
             , description = "subject picture"
             }
-        , el [] <| Element.text review.subject.title
+        , E.el [] <| E.text review.subject.title
         ]
-    , column []
-        [ el [] <| Element.text (String.fromInt review.stars ++ "/5")
-        , el [] <| Element.text <|
-          Maybe.withDefault "(this review has no text)" review.text
+    , E.column []
+        [ E.el [] <| viewNStars review.stars
+        , E.el [] <| E.text <|
+             Maybe.withDefault "(this review has no text)" review.text
         ]
     ]
+ 
+viewNStars : Int -> Element msg
+viewNStars n =
+  E.row [] <|
+    (List.repeat n redStar) ++ (List.repeat (5 - n) greyStar)
+
+redStar : Element msg
+redStar =
+  E.image []
+    { src = "/assets/images/red-star.png"
+    , description = "red star"
+    }
+
+greyStar : Element msg
+greyStar =
+  E.image []
+    { src = "/assets/images/grey-star.png"
+    , description = "grey star"
+    }

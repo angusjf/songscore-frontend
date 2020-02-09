@@ -4,12 +4,15 @@ import Element exposing (column, text)
 import Page exposing (Page)
 import Element.Input as Input
 import Browser
-import Api exposing (Credentials, postUser)
+import Api exposing (NewUser, postUser)
 import Http
 import User
 import Session
 import Route
 import Styles as S
+import File
+import File.Select as Select
+import Task
 
 type alias Model =
   { username : String
@@ -17,6 +20,7 @@ type alias Model =
   , passwordRepeat : String
   , problems : List Problem
   , session : Session.Data
+  , profilePicture : Maybe String
   }
 
 type Msg
@@ -25,6 +29,9 @@ type Msg
   | PasswordRepeatChanged String
   | SignUpPressed
   | Completed (Result Http.Error Api.UserAndToken)
+  | ProfilePicturePressed
+  | OnImageSelected File.File
+  | ImageDecoded String
 
 type alias Problem = String
 
@@ -37,6 +44,7 @@ init session =
       , passwordRepeat = ""
       , problems = []
       , session = session
+      , profilePicture = Nothing
       }
   in
     (model, Cmd.none)
@@ -67,6 +75,7 @@ view model =
             , label = S.labelSmall "Repeat password please"
             , show = False
             }
+        , S.button "Profile picture!" (Just ProfilePicturePressed)
         , S.button "Sign Up" (Just SignUpPressed)
         , column [] <|
             List.map text model.problems
@@ -81,8 +90,8 @@ update msg model =
     PasswordRepeatChanged new -> ({ model | passwordRepeat = new }, Cmd.none)
     SignUpPressed -> 
       case validate model of
-        Ok creds ->
-            ({ model | problems = [] }, Api.postUser creds Completed)
+        Ok newUser ->
+            ({ model | problems = [] }, Api.postUser newUser Completed)
         Err problems -> ({ model | problems = problems }, Cmd.none)
     Completed result ->
       case result of
@@ -95,9 +104,19 @@ update msg model =
             (newModel, Route.goTo model.session.key Route.Feed)
         Err _ ->
             (model, Cmd.none) -- TODO handle
+    ProfilePicturePressed ->
+      (model, Select.file ["image/jpeg", "image/png"] OnImageSelected)
+    OnImageSelected file ->
+      (model, Task.perform ImageDecoded (File.toUrl file))
+    ImageDecoded url ->
+      ({ model | profilePicture = Just url }, Cmd.none)
 
-validate : Model -> Result (List Problem) Credentials
+validate : Model -> Result (List Problem) NewUser
 validate model =
   if model.password == model.passwordRepeat
-    then Ok { username = model.username, password = model.password }
+    then Ok
+      { username = model.username
+      , password = model.password
+      , image = Maybe.withDefault "" model.profilePicture
+      }
     else Err [ "Passwords Should Match" ]

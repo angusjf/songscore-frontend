@@ -3,25 +3,24 @@ module Pages.Feed exposing (..)
 import Session
 import Element exposing (column, text)
 import Page exposing (Page)
-import Widgets.NewReviewForm as NewReviewForm exposing (NewReviewForm)
+import Widgets.NewReviewForm as NRF
 import List exposing (map)
 import Review exposing (Review)
 import Api
 import Http
 import Route
+import MusicDatabase as MDB
 
 type alias Model = 
  { session : Session.Data
- , newReviewForm : NewReviewForm Msg
+ , nrf : NRF.Form Msg
  , reviews : Maybe (List Review)
  }
 
 type Msg
-  = OnSubmitPressed
-  | OnSubjectChanged String
-  | OnStarsChanged Int
-  | OnSubjectQueryChanged String
+  = OnNRFSubmitPressed
   | GotFeed (Result Http.Error (List Review))
+  | NRFMsg NRF.Msg
   | GotNewReview (Result Http.Error Review)
 
 init : Session.Data -> (Model, Cmd Msg)
@@ -29,7 +28,7 @@ init session =
   let
     model =
       { session = session
-      , newReviewForm = clearReviewForm
+      , nrf = NRF.init NRFMsg OnNRFSubmitPressed
       , reviews = Nothing
       }
   in
@@ -40,30 +39,15 @@ init session =
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of 
-    OnSubjectChanged new ->
-      let
-        newForm = NewReviewForm.setText model.newReviewForm new
-      in
-        ({ model | newReviewForm = newForm }, Cmd.none)
-    OnStarsChanged n ->
-      let
-        newForm = NewReviewForm.setStars model.newReviewForm n
-      in
-        ({ model | newReviewForm = newForm }, Cmd.none)
-    OnSubjectQueryChanged new ->
-      let
-        newForm = NewReviewForm.setSubjectQuery model.newReviewForm new
-      in
-        ({ model | newReviewForm = newForm }, Cmd.none)
-    OnSubmitPressed ->
+    OnNRFSubmitPressed ->
       case model.session.userAndToken of
         Just uAndT -> 
-          case NewReviewForm.convertToNewReview model.newReviewForm uAndT.user of
+          case Debug.log "?" <| NRF.convertToReview model.nrf uAndT.user of
             Just newReview -> (model, Api.postReview uAndT newReview GotNewReview)
             Nothing -> (model, Cmd.none)
         Nothing -> (model, Cmd.none)
     GotNewReview result -> 
-      case result of
+      case Debug.log "!" result of
         Ok review ->
           let
             newReviews = 
@@ -72,36 +56,32 @@ update msg model =
                   Just reviews -> review :: reviews
                   Nothing -> [ review ]
           in
-            ( { model | reviews = newReviews, newReviewForm = clearReviewForm }
+            ( { model
+                | reviews = newReviews
+                , nrf = NRF.init NRFMsg OnNRFSubmitPressed
+              }
             , Cmd.none
             )
         Err _ -> (model, Cmd.none)
     GotFeed result ->
-      case (Debug.log ">>>>>>" result) of 
+      case result of 
         Ok reviews -> ({ model | reviews = Just reviews}, Cmd.none)
         Err _ -> (model, Cmd.none)
+    NRFMsg nrfMsg ->
+      let 
+        (nrfModel, cmd) = NRF.update model.nrf nrfMsg
+      in
+        ({ model | nrf = nrfModel }, cmd)
 
 view : Model -> Page Msg
 view model =
   { title = "Feed"
   , body = 
       column []
-        [ NewReviewForm.view model.newReviewForm
+        [ NRF.view model.nrf
         , case model.reviews of
             Just reviews ->
               column [] <| map Review.view reviews
             Nothing -> text "loading..."
         ]
-  }
-
-clearReviewForm : NewReviewForm Msg
-clearReviewForm = 
-  { text = Nothing
-  , stars = Nothing
-  , subject = Nothing
-  , subjectQuery = Nothing
-  , onPress = OnSubmitPressed
-  , onChange = OnSubjectChanged
-  , onStarsChanged = OnStarsChanged
-  , onSubjectQueryChanged = OnSubjectQueryChanged
   }

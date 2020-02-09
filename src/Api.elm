@@ -19,6 +19,12 @@ type alias Credentials =
   , password : String 
   }
 
+type alias NewUser =
+  { username : String
+  , password : String 
+  , image : String
+  }
+
 type alias UserAndToken =
   { user : User
   , token : String
@@ -30,14 +36,15 @@ userAndTokenDecoder =
     (D.field "user" User.decoder)
     (D.field "token" D.string)
 
-postUser : Credentials -> (Result Http.Error UserAndToken -> msg) -> Cmd msg
-postUser creds msg =
+postUser : NewUser -> (Result Http.Error UserAndToken -> msg) -> Cmd msg
+postUser newUser msg =
   let
     body =
       Http.jsonBody <|
       E.object <|
-        [ ("username", E.string creds.username)
-        , ("password", E.string creds.password)
+        [ ("username", E.string newUser.username)
+        , ("password", E.string newUser.password)
+        , ("image", E.string newUser.image)
         ]
   in
     Http.post

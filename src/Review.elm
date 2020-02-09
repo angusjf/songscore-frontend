@@ -51,12 +51,12 @@ encode review =
 
 view : Review -> Element msg
 view review =
-  E.row []
+  E.row [S.spacingMedium]
     [ E.link []
         { url = "/users/" ++ review.user.username
         , label =
             E.column []
-            [ E.image S.mediumSquare
+            [ E.image S.squareMedium
                 { src = Maybe.withDefault "/assets/images/default-user.png" review.user.image
                 , description = "profile picture"
                 }
@@ -64,7 +64,7 @@ view review =
             ]
         }
     , E.column []
-        [ E.image S.mediumSquare
+        [ E.image S.squareMedium
             { src = Maybe.withDefault "/assets/images/default-subject.png" review.subject.image
             , description = "subject picture"
             }

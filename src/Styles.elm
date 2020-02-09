@@ -50,4 +50,10 @@ textSmall str = E.el [ Font.size 16 ] (E.text str)
 
 borderSmall = Border.width 3
 
-mediumSquare = [ E.width (E.maximum 200 E.fill) , E.height (E.maximum 200 E.fill) ]
+squareMedium =
+--  [ E.width (E.maximum 200 E.fill)
+--  , E.height (E.maximum 200 E.fill)
+--  ]
+  [ E.width (px 200)
+  , E.height (px 200)
+  ]

@@ -68,24 +68,26 @@ update model msg =
                  , Cmd.batch
                      [ MDB.searchAlbums model.subjectQuery resultsLimit <|
                          \x -> model.toOuterMsg (GotAlbumResults x)
-                     , MDB.searchSongs model.subjectQuery resultsLimit <|
+                     , MDB.searchSongs model.subjectQuery <|
                          \x -> model.toOuterMsg (GotSongResults x)
                      ]
                  )
     GotAlbumResults res ->
       case res of
-        Ok results -> ({ model | albumResults = results }, Cmd.none)
+        Ok results ->
+          ({ model | albumResults = List.take resultsLimit results }, Cmd.none)
         Err results -> (model, Cmd.none) 
     GotSongResults res ->
-      case res of
-        Ok results -> ({ model | songResults = results }, Cmd.none)
+      case Debug.log "^^^" res of
+        Ok results ->
+          ({ model | songResults = List.take resultsLimit results }, Cmd.none)
         Err results -> (model, Cmd.none) 
     OnAlbumResultClicked album ->
       ({ model
          | subject = Just (albumResultToSubject album)
          , albumResults = []
          , songResults = []
-         , subjectQuery = album.name ++ " " ++ album.artist
+         , subjectQuery = album.name ++ " - " ++ album.artist
        }
       , Cmd.none
       )
@@ -94,7 +96,7 @@ update model msg =
          | subject = Just (songResultToSubject song)
          , albumResults = []
          , songResults = []
-         , subjectQuery = song.name ++ " " ++ song.artist
+         , subjectQuery = song.name ++ " - " ++ song.artist
        }
       , Cmd.none
       )
@@ -102,7 +104,7 @@ update model msg =
 songResultToSubject : MDB.Song -> Subject
 songResultToSubject song =
   { id = Nothing
-  , image = Just song.imageUrlLarge
+  , image = Just song.imageUrl
   , kind = Just Song
   , title = song.name
   , artist = Just song.artist
@@ -111,7 +113,7 @@ songResultToSubject song =
 albumResultToSubject : MDB.Album -> Subject
 albumResultToSubject song =
   { id = Nothing
-  , image = Just song.imageUrlLarge
+  , image = Just song.imageUrl
   , kind = Just Album
   , title = song.name
   , artist = Just song.artist
@@ -150,8 +152,8 @@ viewAlbumResults toOuterMsg album =
     { onPress = Just <| toOuterMsg (OnAlbumResultClicked album)
     , label =
         E.column []
-          [ E.image []
-            { src = album.imageUrlSmall
+          [ E.image S.squareMedium
+            { src = album.imageUrl
             , description = ""
             }
           , E.text album.name
@@ -164,8 +166,8 @@ viewSongResults toOuterMsg song =
     { onPress = Just <| toOuterMsg (OnSongResultClicked song)
     , label =
         E.column []
-          [ E.image []
-            { src = song.imageUrlSmall
+          [ E.image S.squareMedium
+            { src = song.imageUrl
             , description = ""
             }
           , E.text song.name

@@ -10,6 +10,7 @@ import Api
 import Http
 import Route
 import MusicDatabase as MDB
+import Styles as S
 
 type alias Model = 
  { session : Session.Data
@@ -77,11 +78,11 @@ view : Model -> Page Msg
 view model =
   { title = "Feed"
   , body = 
-      column []
+      column [S.spacingMedium]
         [ NRF.view model.nrf
         , case model.reviews of
             Just reviews ->
-              column [] <| map Review.view reviews
+              column [S.spacingMedium] <| map Review.view reviews
             Nothing -> text "loading..."
         ]
   }

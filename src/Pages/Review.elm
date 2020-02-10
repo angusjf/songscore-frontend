@@ -1,7 +1,7 @@
 module Pages.Review exposing (..)
 
 import Session
-import Element exposing (column, text)
+import Styles as S
 import Page exposing (Page)
 import Review exposing (Review)
 import Api
@@ -36,12 +36,7 @@ update msg model =
 
 view : Model -> Page Msg
 view model =
-  { title =
-      case model.review of
-        Just review -> review.user.username ++ "'s review"
-        Nothing -> "Loading"
-  , body =
-      case model.review of
-        Just review -> Review.view review
-        Nothing -> Element.text "Loading..."
+  { title = Maybe.withDefault "Loading..." <|
+        Maybe.map (\x -> x.user.username ++ "'s review") model.review 
+  , body = S.loading model.review Review.view
   }

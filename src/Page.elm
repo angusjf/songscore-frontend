@@ -9,4 +9,3 @@ map converter page =
   { title = page.title
   , body = Element.map converter page.body
   }
-

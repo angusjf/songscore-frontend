@@ -12,9 +12,9 @@ import Pages.User as User
 import Pages.Review as Review
 import Session
 import Route
-import Element
 import Page
 import Widgets.Navbar as Navbar
+import Styles as S exposing (skeleton)
 
 type Page
   = NotFound Session.Data
@@ -119,20 +119,10 @@ view page =
         NotFound session -> Page.map (\_ -> None) NotFound.view
         User model -> Page.map UserMsg (User.view model)
         Review model -> Page.map ReviewMsg (Review.view model)
-    navbar = ()
+    bar = Navbar.view NavbarMsg (Maybe.map .user (getSession page).userAndToken)
   in
     { title = "SongScore: " ++ title
-    , body =
-      [ Element.layout
-        [ Element.width Element.fill ] <|
-          Element.column
-            [ Element.width (Element.maximum 1000 Element.fill)
-            , Element.centerX
-            ]
-            [ Navbar.view NavbarMsg (Maybe.map .user (getSession page).userAndToken)
-            , Element.el [ Element.padding 8 ] body
-            ]
-      ]
+    , body = [ S.skeleton bar body ]
     }
 
 stepUrl : Url.Url -> Page -> (Page, Cmd Msg)

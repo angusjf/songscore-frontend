@@ -5,6 +5,7 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Input as Input
 import Element.Font as Font
+import Html
 
 red = E.rgb 1.0 0.4 0.4
 white = E.rgb 1.0 1.0 1.0
@@ -75,3 +76,60 @@ lightShadow =
     , blur = 15
     , color = veryLightAlpha
     }
+
+{-
+onEnter : msg -> Element.Attribute msg
+onEnter msg =
+  let 
+   decoder = D.string |> D.andThen checkEnter
+   checkEnter key = if key == "Enter"
+                      then D.succeed msg
+                      else D.fail "Not the enter key"
+  in
+    Element.htmlAttribute <|
+      Html.Events.on "keyup" <|
+        D.field "key" decoder
+        -}
+
+----- now for something different
+
+skeleton : Element msg -> Element msg -> Html.Html msg
+skeleton bar body =
+  E.layout [ E.width E.fill ] <|
+    E.column
+      [ E.width (E.maximum 1000 E.fill)
+      , E.centerX
+      ]
+      [ bar
+      , E.el [ E.padding 8 ] body
+      ]
+
+loading : Maybe a -> (a -> Element msg) -> Element msg
+loading maybeA showA =
+  case maybeA of
+    Just a -> showA a
+    Nothing -> text "Loading..."
+
+page : List (Element msg) -> Element msg
+page contents =
+  E.column [ E.width E.fill, spacingMedium ] contents
+
+userProfile : String -> Maybe String -> Element msg
+userProfile username maybeImage =
+  E.row
+    [ E.width E.fill
+    , spacingMedium
+    ] <|
+    case maybeImage of
+      Just image ->
+        [ E.image squareMedium
+          { src = image
+          , description = "profile picture"
+          }
+        , text username
+        ]
+      Nothing -> [ text username ]
+
+contentList : List (Element msg) -> Element msg
+contentList content = E.row [ E.width E.fill , spacingMedium ] content
+

@@ -1,7 +1,7 @@
 module Pages.User exposing (..)
 
 import Session
-import Element exposing (column, text)
+import Styles as S
 import Page exposing (Page)
 import List exposing (map)
 import User exposing (User)
@@ -53,10 +53,10 @@ view model =
         Just user -> user.username
         Nothing -> "Loading"
   , body = 
-      column []
-        [ case model.reviews of
-            Just reviews ->
-              column [] <| map Review.view reviews
-            Nothing -> text "loading..."
+      S.page <|
+        [ S.loading model.user <|
+            \user -> S.userProfile user.username user.image
+        , S.loading model.reviews <|
+            \reviews -> S.contentList <| map Review.view reviews
         ]
   }

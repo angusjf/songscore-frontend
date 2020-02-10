@@ -48,8 +48,8 @@ init toOuterMsg onPress =
   , toOuterMsg = toOuterMsg
   }
 
-update : Form msg -> Msg -> (Form msg, Cmd msg)
-update model msg =
+update : Msg -> Form msg -> (Form msg, Cmd msg)
+update msg model =
   case msg of
     OnTextChanged new ->
       ({ model | text = Just new }, Cmd.none)
@@ -254,5 +254,8 @@ convertToReview form user =
           , stars = stars
           , user = user
           , subject = subject
+          , comments = []
+          , likes = []
+          , dislikes = []
           }
     Nothing -> Nothing

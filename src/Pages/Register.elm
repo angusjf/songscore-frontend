@@ -19,7 +19,6 @@ type alias Model =
   , password : String
   , passwordRepeat : String
   , problems : List Problem
-  , session : Session.Data
   , profilePicture : Maybe String
   }
 
@@ -35,7 +34,7 @@ type Msg
 
 type alias Problem = String
 
-init : Session.Data -> (Model, Cmd Msg)
+init : Session.Data -> (Model, Session.Data, Cmd Msg)
 init session =
   let
     model = 
@@ -43,11 +42,10 @@ init session =
       , password = ""
       , passwordRepeat = ""
       , problems = []
-      , session = session
       , profilePicture = Nothing
       }
   in
-    (model, Cmd.none)
+    (model, session, Cmd.none)
 
 view : Model -> Page Msg
 view model = 
@@ -82,34 +80,34 @@ view model =
         ]
   }
 
-update : Msg -> Model -> (Model, Cmd Msg)
-update msg model =
+update : Msg -> Model -> Session.Data -> (Model, Session.Data, Cmd Msg)
+update msg model session =
   case msg of
-    UsernameChanged new -> ({ model | username = new }, Cmd.none)
-    PasswordChanged new -> ({ model | password = new }, Cmd.none)
-    PasswordRepeatChanged new -> ({ model | passwordRepeat = new }, Cmd.none)
+    UsernameChanged new -> ({ model | username = new }, session, Cmd.none)
+    PasswordChanged new -> ({ model | password = new }, session, Cmd.none)
+    PasswordRepeatChanged new ->
+      ({ model | passwordRepeat = new }, session, Cmd.none)
     SignUpPressed -> 
       case validate model of
         Ok newUser ->
-            ({ model | problems = [] }, Api.postUser newUser Completed)
-        Err problems -> ({ model | problems = problems }, Cmd.none)
+            ({ model | problems = [] }, session, Api.postUser newUser Completed)
+        Err problems -> ({ model | problems = problems }, session, Cmd.none)
     Completed result ->
       case result of
         Ok userAndToken ->
           let
-            oldSession = model.session
+            oldSession = session
             newSession = { oldSession | userAndToken = Just userAndToken }
-            newModel = { model | session = newSession }
           in
-            (newModel, Route.goTo model.session.key Route.Feed)
+            (model, newSession, Route.goTo session.key Route.Feed)
         Err _ ->
-            (model, Cmd.none) -- TODO handle
+            (model, session, Cmd.none) -- TODO handle
     ProfilePicturePressed ->
-      (model, Select.file ["image/jpeg", "image/png"] OnImageSelected)
+      (model, session, Select.file ["image/jpeg", "image/png"] OnImageSelected)
     OnImageSelected file ->
-      (model, Task.perform ImageDecoded (File.toUrl file))
+      (model, session, Task.perform ImageDecoded (File.toUrl file))
     ImageDecoded url ->
-      ({ model | profilePicture = Just url }, Cmd.none)
+      ({ model | profilePicture = Just url }, session, Cmd.none)
 
 validate : Model -> Result (List Problem) NewUser
 validate model =

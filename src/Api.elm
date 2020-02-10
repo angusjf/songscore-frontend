@@ -86,7 +86,7 @@ postReview userAndToken review msg =
     , expect = Http.expectJson msg Review.decoder
     }
 
-maybeTokenGet : Maybe UserAndToken ->  { expect : Http.Expect msg, url : String } -> Cmd msg
+maybeTokenGet : Maybe UserAndToken -> { expect : Http.Expect msg, url : String } -> Cmd msg
 maybeTokenGet userAndToken =
   case userAndToken of 
     Just uAndT -> Jwt.Http.get uAndT.token
@@ -112,3 +112,32 @@ getUser userAndToken username msg =
     { url = apiRoot ++ "/api/users/" ++ username
     , expect = Http.expectJson msg User.decoder
     }
+
+postLike : UserAndToken -> Review -> (Result Http.Error () -> msg) -> Cmd msg
+postLike uAndT review msg =
+  Jwt.Http.post
+    uAndT.token
+    { url = apiRoot ++ "/api/reviews/ ++ review.id ++ /like"
+    , body = Http.emptyBody
+    , expect = Http.expectWhatever msg
+    } 
+
+postDisike : UserAndToken -> Review -> (Result Http.Error () -> msg) -> Cmd msg
+postDisike uAndT review msg =
+  Jwt.Http.post
+    uAndT.token
+    { url = apiRoot ++ "/api/reviews/ ++ id ++ /like"
+    , body = Http.emptyBody
+    , expect = Http.expectWhatever msg
+    } 
+
+deleteReview : UserAndToken -> Review -> (Result Http.Error () -> msg) -> Cmd msg
+deleteReview uAndT review msg =
+  let
+    id = Maybe.withDefault "NULL" <| Maybe.map String.fromInt review.id
+  in
+    Jwt.Http.delete
+      uAndT.token
+      { url = apiRoot ++ "/api/reviews/" ++ id
+      , expect = Http.expectWhatever msg
+      } 

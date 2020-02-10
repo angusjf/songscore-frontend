@@ -23,6 +23,7 @@ spacingMedium = E.spacing 16
 
 text str = E.el [ Font.size 16 ] <| E.text str
 textAlt str = E.el [ Font.size 16, Font.color white, Font.bold ] <| E.text str
+boldText str = E.el [ Font.size 16, Font.bold ] <| E.text str
 
 button str action =
   Input.button

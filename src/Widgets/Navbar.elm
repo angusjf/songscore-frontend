@@ -14,23 +14,28 @@ type Msg
  | OnLoginClicked
  | OnSignupClicked
  | OnUserClicked
+ | OnLogoutClicked
 
-update : Msg -> Session.Data -> Cmd msg
+update : Msg -> Session.Data -> (Session.Data, Cmd msg)
 update msg session =
   case msg of
     OnLogoClicked ->
-      Route.goTo session.key Route.Feed
+      (session, Route.goTo session.key Route.Feed)
     OnSignupClicked ->
-      Route.goTo session.key Route.Register
+      (session, Route.goTo session.key Route.Register)
     OnLoginClicked ->
-      Route.goTo session.key Route.Login
+      (session, Route.goTo session.key Route.Login)
     OnUserClicked ->
       case session.userAndToken of
-        Just uAndT -> Route.goTo session.key (Route.User uAndT.user.username)
-        Nothing -> Cmd.none
+        Just uAndT ->
+          (session, Route.goTo session.key (Route.User uAndT.user.username))
+        Nothing ->
+          (session, Cmd.none)
+    OnLogoutClicked ->
+      ({ session | userAndToken = Nothing }, Route.goTo session.key Route.Root)
 
-view : (Msg -> msg) -> Maybe User -> E.Element msg
-view toOuter maybeUser =
+view : (Msg -> msg) -> Session.Data -> E.Element msg
+view toOuter session =
   E.row
     [ E.height E.shrink
     , E.width E.fill
@@ -40,7 +45,7 @@ view toOuter maybeUser =
     ]
     [ S.buttonAlt "Home" <| Just <| toOuter OnLogoClicked
     , E.row [ E.alignRight , S.spacingMedium ] <|
-        case maybeUser of
+        case Maybe.map .user session.userAndToken of
           Just user ->
             [ Input.button
               [ E.alignRight
@@ -64,10 +69,10 @@ view toOuter maybeUser =
                         ]
                     Nothing -> S.text user.username
               }
-            , S.buttonAlt "Log out" <| Nothing
+            , S.buttonAlt "Log out" <| Just <| toOuter OnLogoutClicked
             ]
           Nothing ->
-              [ S.buttonAlt "Log in" <| Just <| toOuter OnLoginClicked
-              , S.buttonAlt "Sign Up" <| Just <| toOuter OnSignupClicked
-              ]
+            [ S.buttonAlt "Log in" <| Just <| toOuter OnLoginClicked
+            , S.buttonAlt "Sign Up" <| Just <| toOuter OnSignupClicked
+            ]
     ]

@@ -16,8 +16,10 @@ import Page
 import Widgets.Navbar as Navbar
 import Styles as S exposing (skeleton)
 
+type alias Model = { page : Page, session : Session.Data }
+
 type Page
-  = NotFound Session.Data
+  = NotFound
   | Register Register.Model
   | Feed Feed.Model
   | Login Login.Model
@@ -35,126 +37,123 @@ type Msg
   | NavbarMsg Navbar.Msg
   | None
 
-init : () -> Url.Url -> Nav.Key -> (Page, Cmd Msg)
-init _ url key = stepUrl url (NotFound (Session.fromNavKey key))
+init : () -> Url.Url -> Nav.Key -> (Model, Cmd Msg)
+init _ url key =
+  stepUrl url { page = NotFound, session = Session.fromNavKey key }
 
-update : Msg -> Page -> (Page, Cmd Msg)
-update message page =
+update : Msg -> Model -> (Model, Cmd Msg)
+update message model =
   case message of
     LinkClicked urlRequest ->
       case urlRequest of
         Browser.Internal url ->
-          (page, Nav.pushUrl (getSession page).key (Url.toString url))
+          (model, Nav.pushUrl model.session.key (Url.toString url))
         Browser.External href ->
-          (page, Nav.load href)
+          (model, Nav.load href)
     UrlChanged url ->
-      stepUrl url page
+      stepUrl url model
     RegisterMsg msg ->
-      case page of
-        Register model ->
-            stepRegister page <| Register.update msg model
-        _ -> (page, Cmd.none)
+      case model.page of
+        Register innerModel ->
+          stepRegister model <| Register.update msg innerModel model.session
+        _ -> (model, Cmd.none)
     LoginMsg msg ->
-      case page of
-        Login model ->
-            stepLogin page <| Login.update msg model
-        _ -> (page, Cmd.none)
+      case model.page of
+        Login innerModel ->
+          stepLogin model <| Login.update msg innerModel model.session
+        _ -> (model, Cmd.none)
     FeedMsg msg ->
-      case page of
-        Feed model ->
-          stepFeed page <| Feed.update msg model
-        _ -> (page, Cmd.none)
-    None -> (page, Cmd.none)
+      case model.page of
+        Feed innerModel ->
+          stepFeed model <| Feed.update msg innerModel model.session
+        _ -> (model, Cmd.none)
+    None -> (model, Cmd.none)
     UserMsg msg ->
-      case page of
-        User model ->
-          stepUser page <| User.update msg model
-        _ -> (page, Cmd.none)
+      case model.page of
+        User innerModel ->
+          stepUser model <| User.update msg innerModel model.session
+        _ -> (model, Cmd.none)
     ReviewMsg msg ->
-      case page of
-        Review model ->
-          stepReview page <| Review.update msg model
-        _ -> (page, Cmd.none)
+      case model.page of
+        Review innerModel ->
+          stepReview model <| Review.update msg innerModel model.session
+        _ -> (model, Cmd.none)
     NavbarMsg msg ->
-      (page, Navbar.update msg (getSession page))
+      stepNavbar model <| Navbar.update msg model.session
 
-stepRegister : Page -> (Register.Model, Cmd Register.Msg) -> (Page, Cmd Msg)
-stepRegister model (registerModel, registerCmd) =
-  ( Register registerModel
+stepUrl : Url.Url -> Model -> (Model, Cmd Msg)
+stepUrl url model =
+  case (Route.fromUrl url) of
+    Nothing -> ({ model | page = NotFound }, Cmd.none)
+    Just Route.Register -> stepRegister model (Register.init model.session)
+    Just Route.Feed -> stepFeed model (Feed.init model.session)
+    Just Route.Login -> stepLogin model (Login.init model.session)
+    Just Route.Root ->
+      case model.session.userAndToken of
+        Just _ -> stepFeed model (Feed.init model.session)
+        Nothing -> stepLogin model (Login.init model.session)
+    Just (Route.User username) ->
+      stepUser model (User.init model.session username)
+    Just (Route.Review username id) ->
+      stepReview model (Review.init model.session username id)
+
+stepRegister : Model -> (Register.Model, Session.Data, Cmd Register.Msg) -> (Model, Cmd Msg)
+stepRegister model (registerModel, session, registerCmd) =
+  ( { page = Register registerModel, session = session }
   , Cmd.map RegisterMsg registerCmd
   )
 
-stepLogin : Page -> (Login.Model, Cmd Login.Msg) -> (Page, Cmd Msg)
-stepLogin model (loginModel, loginCmd) =
-  ( Login loginModel
+stepLogin : Model -> (Login.Model, Session.Data, Cmd Login.Msg) -> (Model, Cmd Msg)
+stepLogin model (loginModel, session, loginCmd) =
+  ( { page = Login loginModel, session = session }
   , Cmd.map LoginMsg loginCmd
   )
 
-stepFeed : Page -> (Feed.Model, Cmd Feed.Msg) -> (Page, Cmd Msg)
-stepFeed model (feedModel, feedCmd) =
-  ( Feed feedModel
+stepFeed : Model -> (Feed.Model, Session.Data, Cmd Feed.Msg) -> (Model, Cmd Msg)
+stepFeed model (feedModel, session, feedCmd) =
+  ( { page = Feed feedModel, session = session}
   , Cmd.map FeedMsg feedCmd
   )
 
-stepUser : Page -> (User.Model, Cmd User.Msg) -> (Page, Cmd Msg)
-stepUser model (userModel, userCmd) =
-  ( User userModel
+stepUser : Model -> (User.Model, Session.Data, Cmd User.Msg) -> (Model, Cmd Msg)
+stepUser model (userModel, session, userCmd) =
+  ( { page = User userModel, session = session }
   , Cmd.map UserMsg userCmd
   )
 
-stepReview : Page -> (Review.Model, Cmd Review.Msg) -> (Page, Cmd Msg)
-stepReview model (reviewModel, reviewCmd) =
-  ( Review reviewModel
+stepReview : Model -> (Review.Model, Session.Data, Cmd Review.Msg) -> (Model, Cmd Msg)
+stepReview model (reviewModel, session, reviewCmd) =
+  ( { page = Review reviewModel, session = session }
   , Cmd.map ReviewMsg reviewCmd
   )
 
-view : Page -> Browser.Document Msg
-view page =
+stepNavbar : Model -> (Session.Data, Cmd Msg) -> (Model, Cmd Msg)
+stepNavbar model (session, cmd) = ({ model | session = session }, cmd)
+
+view : Model -> Browser.Document Msg
+view model =
   let
     { title, body } =
-      case page of
-        Register model -> Page.map RegisterMsg (Register.view model)
-        Login model -> Page.map LoginMsg (Login.view model)
-        Feed model -> Page.map FeedMsg (Feed.view model)
-        NotFound session -> Page.map (\_ -> None) NotFound.view
-        User model -> Page.map UserMsg (User.view model)
-        Review model -> Page.map ReviewMsg (Review.view model)
-    bar = Navbar.view NavbarMsg (Maybe.map .user (getSession page).userAndToken)
+      case model.page of
+        Register innerModel ->
+          Page.map RegisterMsg <| Register.view innerModel
+        Login innerModel ->
+          Page.map LoginMsg <| Login.view innerModel
+        Feed innerModel ->
+          Page.map FeedMsg <| Feed.view model.session innerModel
+        NotFound ->
+          Page.map (always None) <| NotFound.view
+        User innerModel ->
+          Page.map UserMsg <| User.view model.session innerModel
+        Review innerModel ->
+          Page.map ReviewMsg <| Review.view model.session innerModel
+    bar = Navbar.view NavbarMsg model.session
   in
     { title = "SongScore: " ++ title
     , body = [ S.skeleton bar body ]
     }
 
-stepUrl : Url.Url -> Page -> (Page, Cmd Msg)
-stepUrl url page =
-  let
-    session = getSession page
-  in
-    case (Route.fromUrl url) of
-      Nothing -> (NotFound session, Cmd.none)
-      Just Route.Register -> stepRegister page (Register.init session)
-      Just Route.Feed -> stepFeed page (Feed.init session)
-      Just Route.Login -> stepLogin page (Login.init session)
-      Just Route.Root ->
-        case session.userAndToken of
-          Just _ -> stepFeed page (Feed.init session)
-          Nothing -> stepLogin page (Login.init session)
-      Just (Route.User username) ->
-        stepUser page (User.init session username)
-      Just (Route.Review username id) ->
-        stepReview page (Review.init session username id)
-
-getSession : Page -> Session.Data
-getSession page =
-  case page of 
-    NotFound session -> session
-    Register model -> model.session
-    Login model -> model.session
-    Feed model -> model.session
-    User model -> model.session
-    Review model -> model.session
-
-main : Program () Page Msg
+main : Program () Model Msg
 main =
   Browser.application
     { init = init

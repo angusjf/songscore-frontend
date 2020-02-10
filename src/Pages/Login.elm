@@ -15,7 +15,6 @@ type alias Model =
   { username : String
   , password : String
   , problems : List Problem
-  , session : Session.Data
   }
 
 type Msg
@@ -26,17 +25,16 @@ type Msg
 
 type alias Problem = String
 
-init : Session.Data -> (Model, Cmd Msg)
+init : Session.Data -> (Model, Session.Data, Cmd Msg)
 init session =
   let
     model = 
       { username = ""
       , password = ""
       , problems = []
-      , session = session
       }
   in
-    (model, Cmd.none)
+    (model, session, Cmd.none)
 
 view : Model -> Page Msg
 view model = 
@@ -63,27 +61,26 @@ view model =
         ]
   }
 
-update : Msg -> Model -> (Model, Cmd Msg)
-update msg model =
+update : Msg -> Model -> Session.Data -> (Model, Session.Data, Cmd Msg)
+update msg model session =
   case msg of
-    UsernameChanged new -> ({ model | username = new }, Cmd.none)
-    PasswordChanged new -> ({ model | password = new }, Cmd.none)
+    UsernameChanged new -> ({ model | username = new }, session, Cmd.none)
+    PasswordChanged new -> ({ model | password = new }, session, Cmd.none)
     LogInPressed -> 
       case (validate model) of
         Ok creds ->
-            ({ model | problems = [] }, Api.postLogin creds Completed)
-        Err problems -> ({ model | problems = problems }, Cmd.none)
+            ({ model | problems = [] }, session, Api.postLogin creds Completed)
+        Err problems -> ({ model | problems = problems }, session, Cmd.none)
     Completed result ->
       case (Debug.log "got result" result) of
         Ok userAndToken ->
           let
-            oldSession = model.session
+            oldSession = session
             newSession = { oldSession | userAndToken = Just userAndToken }
-            newModel = { model | session = newSession }
           in
-            (newModel, Route.goTo model.session.key Route.Feed)
+            (model, newSession, Route.goTo session.key Route.Feed)
         Err _ ->
-            ({model | password = "", problems = [ "error!" ] }, Cmd.none) -- TODO handle
+            ({model | password = "", problems = [ "error!" ] }, session, Cmd.none) -- TODO handle
 
 validate : Model -> Result (List Problem) Credentials
 validate model =

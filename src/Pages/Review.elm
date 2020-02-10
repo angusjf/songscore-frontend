@@ -4,39 +4,48 @@ import Session
 import Styles as S
 import Page exposing (Page)
 import Review exposing (Review)
+import Elements.Review as Review
 import Api
 import Http
 import Route
 
 type alias Model = 
- { session : Session.Data
- , review : Maybe Review
+ { review : Maybe Review
  }
 
 type Msg
   = GotReview (Result Http.Error Review)
 
-init : Session.Data -> String -> Int -> (Model, Cmd Msg)
+init : Session.Data -> String -> Int -> (Model, Session.Data, Cmd Msg)
 init session username id =
   let
     model =
-      { session = session
-      , review = Nothing
+      { review = Nothing
       }
   in
-    (model, Api.getReview session.userAndToken id GotReview)
+    (model, session, Api.getReview session.userAndToken id GotReview)
 
-update : Msg -> Model -> (Model, Cmd Msg)
-update msg model =
+update : Msg -> Model -> Session.Data -> (Model, Session.Data, Cmd Msg)
+update msg model session =
   case msg of 
     GotReview result ->
       case result of 
-        Ok review -> ({ model | review = Just review}, Cmd.none)
-        Err _ -> (model, Cmd.none)
+        Ok review -> ({ model | review = Just review}, session, Cmd.none)
+        Err _ -> (model, session, Cmd.none)
 
-view : Model -> Page Msg
-view model =
+view : Session.Data -> Model -> Page Msg
+view session model =
   { title = Maybe.withDefault "Loading..." <|
         Maybe.map (\x -> x.user.username ++ "'s review") model.review 
-  , body = S.loading model.review Review.view
+  , body = S.loading model.review
+             (\review ->
+               Review.view
+                 { review = review
+                 , session = session
+                 , onDelete = Nothing
+                 , onLike = Nothing
+                 , onDislike = Nothing
+                 , onComment = Nothing
+                 }
+             )
   }

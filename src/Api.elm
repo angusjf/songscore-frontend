@@ -113,25 +113,39 @@ getUser userAndToken username msg =
     , expect = Http.expectJson msg User.decoder
     }
 
-postLike : UserAndToken -> Review -> (Result Http.Error () -> msg) -> Cmd msg
+postLike : UserAndToken -> Review -> (Result Http.Error Review -> msg) -> Cmd msg
 postLike uAndT review msg =
   Jwt.Http.post
     uAndT.token
     { url = apiRoot ++ "/api/reviews/ ++ review.id ++ /like"
     , body = Http.emptyBody
-    , expect = Http.expectWhatever msg
+    , expect = Http.expectJson msg Review.decoder
     } 
 
-postDisike : UserAndToken -> Review -> (Result Http.Error () -> msg) -> Cmd msg
+postDisike : UserAndToken -> Review -> (Result Http.Error Review -> msg) -> Cmd msg
 postDisike uAndT review msg =
   Jwt.Http.post
     uAndT.token
     { url = apiRoot ++ "/api/reviews/ ++ id ++ /like"
     , body = Http.emptyBody
-    , expect = Http.expectWhatever msg
+    , expect = Http.expectJson msg Review.decoder
     } 
 
-deleteReview : UserAndToken -> Review -> (Result Http.Error () -> msg) -> Cmd msg
+postComment : UserAndToken -> Review -> String -> (Result Http.Error Review -> msg) -> Cmd msg
+postComment uAndT review comment msg =
+  let
+    body =
+      Review.encodeComment
+        { id = Nothing, text = comment, user = uAndT.user }
+  in
+    Jwt.Http.post
+      uAndT.token
+      { url = apiRoot ++ "/api/reviews/ ++ review.id ++ /comments"
+      , body = Http.jsonBody body
+      , expect = Http.expectJson msg Review.decoder
+      } 
+
+deleteReview : UserAndToken -> Review -> (Result Http.Error Review -> msg) -> Cmd msg
 deleteReview uAndT review msg =
   let
     id = Maybe.withDefault "NULL" <| Maybe.map String.fromInt review.id
@@ -139,5 +153,5 @@ deleteReview uAndT review msg =
     Jwt.Http.delete
       uAndT.token
       { url = apiRoot ++ "/api/reviews/" ++ id
-      , expect = Http.expectWhatever msg
+      , expect = Http.expectJson msg Review.decoder
       } 

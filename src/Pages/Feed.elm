@@ -1,10 +1,10 @@
 module Pages.Feed exposing (..)
 
 import Session
-import Element exposing (column, text)
-import Elements.Review as Review
+import Element as E exposing (Element)
 import Page exposing (Page)
 import Widgets.NewReviewForm as NRF
+import Widgets.ReviewList as RL
 import List exposing (map)
 import Review exposing (Review)
 import Api
@@ -15,7 +15,7 @@ import Styles as S
 
 type alias Model = 
  { nrf : NRF.Form Msg
- , reviews : Maybe (List Review)
+ , feed : RL.Model
  }
 
 type Msg
@@ -23,13 +23,15 @@ type Msg
   | GotFeed (Result Http.Error (List Review))
   | NRFMsg NRF.Msg
   | GotNewReview (Result Http.Error Review)
+  | RLMsg RL.Msg
 
 init : Session.Data -> (Model, Session.Data, Cmd Msg)
 init session =
   let
+    (rl, _, _) = RL.init session []
     model =
       { nrf = NRF.init NRFMsg OnNRFSubmitPressed
-      , reviews = Nothing
+      , feed = rl
       }
   in
     case session.userAndToken of
@@ -51,49 +53,44 @@ update msg model session =
     GotNewReview result -> 
       case Debug.log "!" result of
         Ok review ->
-          let
-            newReviews = 
-              Just <|
-                case model.reviews of
-                  Just reviews -> review :: reviews
-                  Nothing -> [ review ]
-          in
-            ( { model
-                | reviews = newReviews
-                , nrf = NRF.init NRFMsg OnNRFSubmitPressed
-              }
-            , session
-            , Cmd.none
-            )
+          ( { model
+              | feed = RL.addReview review model.feed
+              , nrf = NRF.init NRFMsg OnNRFSubmitPressed
+            }
+          , session
+          , Cmd.none
+          )
         Err _ -> (model, session, Cmd.none)
     GotFeed result ->
       case result of 
-        Ok reviews -> ({ model | reviews = Just reviews }, session, Cmd.none)
+        Ok reviews ->
+          ( { model
+              | feed = RL.setReviews reviews
+            }
+          , session
+          , Cmd.none
+          )
         Err _ -> (model, session, Cmd.none)
     NRFMsg nrfMsg ->
       let 
         (nrfModel, cmd) = NRF.update nrfMsg model.nrf
       in
         ({ model | nrf = nrfModel }, session, cmd)
+    RLMsg rlMsg ->
+      let 
+        (rlModel, newSession, rlCmd) = RL.update rlMsg model.feed session
+      in
+        ( { model | feed = rlModel }
+        , newSession
+        , Cmd.map RLMsg rlCmd
+        )
 
 view : Session.Data -> Model -> Page Msg
 view session model =
   { title = "Feed"
   , body = 
-      column [S.spacingMedium]
+      E.column [S.spacingMedium]
         [ NRF.view model.nrf
-        , S.loading model.reviews <|
-            column [S.spacingMedium] <<
-              map
-                (\review -> 
-                  Review.view
-                    { review = review
-                    , session = session
-                    , onDelete = Nothing
-                    , onLike = Nothing
-                    , onDislike = Nothing
-                    , onComment = Nothing
-                    }
-                )
+        , E.map RLMsg <| RL.view session model.feed
         ]
   }

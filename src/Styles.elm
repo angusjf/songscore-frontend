@@ -132,5 +132,119 @@ userProfile username maybeImage =
       Nothing -> [ text username ]
 
 contentList : List (Element msg) -> Element msg
-contentList content = E.row [ E.width E.fill , spacingMedium ] content
+contentList content = E.column [ E.width E.fill , spacingMedium ] content
 
+--------------------- REVIEWBOX
+
+reviewAndCommentBox :
+  { subjectImage : Maybe String
+  , subjectArtist : Maybe String
+  , subjectTitle : String
+  , username : String
+  , userImage : Maybe String
+  , ownReview : Bool
+  , onDelete : Maybe msg
+  , onLike : Maybe msg
+  , onDislike : Maybe msg
+  , reviewStars : Int
+  , reviewText : Maybe String
+  , comments : List (String, String)
+  }
+  -> Element msg
+reviewAndCommentBox
+  { subjectImage, subjectArtist, subjectTitle, username, userImage, ownReview
+  , onDelete, onLike, onDislike, reviewStars, reviewText, comments }
+  =
+    E.column [spacingMedium, lightShadow, paddingMedium]
+      [ E.row [spacingMedium]
+        [ nStars reviewStars
+        ]
+      ]
+    --      [ E.column [spacingMedium, E.alignTop] 
+    --          [ E.image squareMedium
+    --              { src = Maybe.withDefault
+    --                  "/assets/images/default-subject.png"
+    --                  subjectImage
+    --              , description = "subject picture"
+    --              }
+    --          , E.column [] <|
+    --              [ text <| Maybe.withDefault "" subjectArtist
+    --              , text subjectTitle
+    --              ]
+    --          ]
+    --      , E.column [spacingMedium, E.width (E.px 500), E.alignTop] 
+    --          [ E.row [E.width E.fill]
+    --              [ E.link []
+    --                  { url = "/users/" ++ username
+    --                  , label =
+    --                      E.row []
+    --                        [ E.image circleSmall
+    --                            { src =
+    --                                Maybe.withDefault
+    --                                  "/assets/images/default-user.png"
+    --                                  userImage
+    --                            , description = "profile picture"
+    --                            }
+    --                        , text ("@" ++ username)
+    --                        ]
+    --                  }
+    --              ]
+    --              
+    --                E.row [E.alignRight] <|
+    --                  if ownReview
+    --                        then [ button "delete" <| onDelete ]
+    --                        else []
+    --            ]
+    --            , E.row [spacingMedium, E.width E.fill]
+    --                [ E.column [spacingMedium, E.width E.fill] <|
+    --                    [ nStars reviewStars
+    --                    , E.paragraph [E.width E.fill] <|
+    --                        [ E.text <|
+    --                            Maybe.withDefault
+    --                              "(this review has no text)" <|
+    --                              Maybe.map (\x -> "“" ++ x ++ "”") reviewText
+    --                        ]
+    --                    ]
+    --                , E.row [spacingMedium, E.alignRight, E.alignTop]
+    --                    [ button "<3" <| onLike
+    --                    , button ":(" <| onDislike
+    --                    ]
+    --                ]
+    --          ]
+
+    --  ,       ]
+
+viewComments : List (String, String) -> Element msg
+viewComments comments =
+  E.column [E.width E.fill] <|
+    List.map comment comments
+
+
+comment : (String, String) -> Element msg
+comment (username, commentText) =
+  E.row [spacingMedium, paddingSmall]
+    [ E.link []
+        { url = "/users/" ++ username
+        , label = boldText ("@" ++ username ++ ":")
+        }
+    , text commentText
+    ]
+ 
+nStars : Int -> Element msg
+nStars n =
+  E.row [spacingSmall] <|
+    (List.repeat n redStar) ++ (List.repeat (5 - n) greyStar)
+
+redStar : Element msg
+redStar =
+  E.image [E.width (E.px 72) , E.height (E.px 72)]
+    { src = "/assets/images/red-star.png"
+    , description = "red star"
+    }
+
+greyStar : Element msg
+greyStar =
+  E.image [E.width (E.px 72) , E.height (E.px 72)]
+    { src = "/assets/images/grey-star.png"
+    , description = "grey star"
+    }

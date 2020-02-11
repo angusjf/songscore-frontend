@@ -4,7 +4,6 @@ import Session
 import Styles as S
 import Page exposing (Page)
 import Review exposing (Review)
-import Elements.Review as Review
 import Api
 import Http
 import Route
@@ -35,17 +34,8 @@ update msg model session =
 
 view : Session.Data -> Model -> Page Msg
 view session model =
-  { title = Maybe.withDefault "Loading..." <|
+  { title =
+      Maybe.withDefault "Loading..." <|
         Maybe.map (\x -> x.user.username ++ "'s review") model.review 
-  , body = S.loading model.review
-             (\review ->
-               Review.view
-                 { review = review
-                 , session = session
-                 , onDelete = Nothing
-                 , onLike = Nothing
-                 , onDislike = Nothing
-                 , onComment = Nothing
-                 }
-             )
+  , body = S.text "NOT DONE!"
   }

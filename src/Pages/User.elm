@@ -6,37 +6,55 @@ import Page exposing (Page)
 import List exposing (map)
 import User exposing (User)
 import Review exposing (Review)
-import Elements.Review as Review
+import Element
+import Widgets.ReviewList as ReviewList
 import Api
 import Http
 import Route
 
 type alias Model = 
- { reviews : Maybe (List Review)
- , user : Maybe User
+ { user : Maybe User
+ , reviewListModel : ReviewList.Model
  }
 
 type Msg
   = GotReviews (Result Http.Error (List Review))
   | GotUser (Result Http.Error User)
+  | ReviewListMsg ReviewList.Msg
 
 init : Session.Data -> String -> (Model, Session.Data, Cmd Msg)
 init session username =
   let
+    (reviewListModel, _, rlCmd) = ReviewList.init session []
     model =
-      { reviews = Nothing
-      , user = Nothing
+      { user = Nothing
+      , reviewListModel = reviewListModel
       }
   in
     (model, session, Api.getUser session.userAndToken username GotUser)
+
+stepReviewList : Model ->
+                 (ReviewList.Model, Session.Data, Cmd ReviewList.Msg) ->
+                 (Model, Session.Data, Cmd Msg)
+stepReviewList model (reviewListModel, session, msg) =
+  ( { model | reviewListModel = reviewListModel }
+  , session, Cmd.map ReviewListMsg msg
+  )
 
 update : Msg -> Model -> Session.Data -> (Model, Session.Data, Cmd Msg)
 update msg model session =
   case msg of 
     GotReviews result ->
       case Debug.log "£££££" result of 
-        Ok reviews -> ({ model | reviews = Just reviews}, session, Cmd.none)
-        Err _ -> (model, session, Cmd.none) -- TODO
+        Ok reviews ->
+          ( { model
+              | reviewListModel = ReviewList.setReviews reviews
+            }
+          , session
+          , Cmd.none
+          )
+        Err _ ->
+          (model, session, Cmd.none) -- TODO
     GotUser result ->
       case result of
         Ok user ->
@@ -45,6 +63,9 @@ update msg model session =
           , Api.getUserReviews session.userAndToken user GotReviews
           )
         Err _ -> (model, session, Cmd.none) -- TODO
+    ReviewListMsg rlMsg ->
+      stepReviewList model <|
+        ReviewList.update rlMsg model.reviewListModel session
 
 view : Session.Data -> Model -> Page Msg
 view session model =
@@ -56,20 +77,7 @@ view session model =
       S.page <|
         [ S.loading model.user <|
             \user -> S.userProfile user.username user.image
-        , S.loading model.reviews <|
-            \reviews ->
-              S.contentList <|
-                map
-                  (\review -> 
-                    Review.view
-                      { review = review
-                      , session = session
-                      , onDelete = Nothing
-                      , onLike = Nothing
-                      , onDislike = Nothing
-                      , onComment = Nothing
-                      }
-                  )
-                  reviews
+        , Element.map ReviewListMsg <|
+            ReviewList.view session model.reviewListModel
         ]
   }

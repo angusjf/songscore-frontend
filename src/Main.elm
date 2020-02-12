@@ -11,6 +11,7 @@ import Pages.NotFound as NotFound
 import Pages.User as User
 import Pages.Review as Review
 import Session
+import Api exposing (UserAndToken)
 import Route
 import Page
 import Widgets.Navbar as Navbar
@@ -37,9 +38,9 @@ type Msg
   | NavbarMsg Navbar.Msg
   | None
 
-init : () -> Url.Url -> Nav.Key -> (Model, Cmd Msg)
-init _ url key =
-  stepUrl url { page = NotFound, session = Session.fromNavKey key }
+init : Maybe UserAndToken -> Url.Url -> Nav.Key -> (Model, Cmd Msg)
+init uAndT url key =
+  stepUrl url { page = NotFound, session = Session.create uAndT key }
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update message model =
@@ -153,7 +154,7 @@ view model =
     , body = [ S.skeleton bar body ]
     }
 
-main : Program () Model Msg
+main : Program (Maybe UserAndToken) Model Msg
 main =
   Browser.application
     { init = init

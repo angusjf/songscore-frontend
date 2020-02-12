@@ -19,6 +19,7 @@ type Msg
   | ReviewLiked (Result Http.Error Review)
   | ReviewDisliked (Result Http.Error Review)
   | CommentSubmitted (Result Http.Error Review)
+  | OnReviewCommentChanged Review String
 
 init : Session.Data -> List Review -> (Model, Session.Data, Cmd Msg)
 init session reviews = (setReviews reviews, session, Cmd.none)
@@ -71,6 +72,12 @@ update msg model session =
       case result of
         Ok review -> (deleteReview review model, session, Cmd.none)
         Err _ -> (model, session, Cmd.none)
+    OnReviewCommentChanged review newComment ->
+      (setComment review newComment model, session, Cmd.none)
+
+setComment : Review -> String -> Model -> Model
+setComment review newComment dict =
+  setIf (\(r, c) -> r.id == review.id) (review, newComment) dict
 
 deleteReview : Review -> Model -> Model
 deleteReview review dict =
@@ -91,20 +98,15 @@ setIf pred elem list =
 
 viewReviewAndComment : Session.Data -> (Review, String) -> Element Msg
 viewReviewAndComment session (review, newComment) =
-  S.reviewAndCommentBox
-    { comments = []
-    , onDelete = Nothing
-    , onDislike = Nothing
-    , onLike = Nothing
-    , ownReview = False
-    , reviewStars = review.stars
-    , reviewText = review.text
-    , subjectArtist = review.subject.artist
-    , subjectImage = review.subject.image
-    , subjectTitle = review.subject.title
-    , userImage = review.user.image
-    , username = review.user.username
-    }
+  S.viewReview
+    (Maybe.map .user session.userAndToken)
+    review
+    newComment
+    (OnDelete review)
+    (OnLike review)
+    (OnDislike review)
+    (OnReviewCommentChanged review)
+    (OnCommentSubmit review)
 
 setReviews : List Review -> Model
 setReviews reviews = List.map (\r -> (r, "")) reviews

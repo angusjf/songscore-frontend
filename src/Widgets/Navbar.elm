@@ -32,7 +32,12 @@ update msg session =
         Nothing ->
           (session, Cmd.none)
     OnLogoutClicked ->
-      ({ session | userAndToken = Nothing }, Route.goTo session.key Route.Root)
+      ( { session | userAndToken = Nothing }
+      , Cmd.batch
+          [ Route.goTo session.key Route.Root
+          , Session.store Nothing
+          ]
+      )
 
 view : (Msg -> msg) -> Session.Data -> E.Element msg
 view toOuter session =

@@ -99,7 +99,13 @@ update msg model session =
             oldSession = session
             newSession = { oldSession | userAndToken = Just userAndToken }
           in
-            (model, newSession, Route.goTo session.key Route.Feed)
+            ( model
+            , newSession
+            , Cmd.batch
+                [ Route.goTo session.key Route.Feed
+                , Session.store <| Just userAndToken
+                ]
+            )
         Err _ ->
             (model, session, Cmd.none) -- TODO handle
     ProfilePicturePressed ->

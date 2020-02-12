@@ -155,3 +155,10 @@ deleteReview uAndT review msg =
       { url = apiRoot ++ "/api/reviews/" ++ id
       , expect = Http.expectJson msg Review.decoder
       } 
+
+getUsernameAvailability : String -> (Result Http.Error Bool -> msg) -> Cmd msg
+getUsernameAvailability username msg =
+  Http.get
+    { url = apiRoot ++ "/api/users/" ++ username ++ "/available"
+    , expect = Http.expectJson msg D.bool
+    }

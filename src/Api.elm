@@ -8,11 +8,10 @@ import Review exposing (Review)
 import Jwt.Http
 
 apiRoot : String
-apiRoot =
-  case 1 of
-    0 -> "https://songscore.herokuapp.com"
-    1 -> "http://localhost:8081"
-    _ -> ""
+apiRoot = ""
+-------- "https://songscore.herokuapp.com"
+-------- "http://localhost:8081"
+-------- ""
 
 type alias Credentials =
   { username : String
@@ -115,21 +114,27 @@ getUser userAndToken username msg =
 
 postLike : UserAndToken -> Review -> (Result Http.Error Review -> msg) -> Cmd msg
 postLike uAndT review msg =
-  Jwt.Http.post
-    uAndT.token
-    { url = apiRoot ++ "/api/reviews/ ++ review.id ++ /like"
-    , body = Http.emptyBody
-    , expect = Http.expectJson msg Review.decoder
-    } 
+  let
+    id = String.fromInt <| Maybe.withDefault (-1) review.id 
+  in
+    Jwt.Http.post
+      uAndT.token
+      { url = apiRoot ++ "/api/reviews/" ++ id ++ "/like"
+      , body = Http.emptyBody
+      , expect = Http.expectJson msg Review.decoder
+      } 
 
-postDisike : UserAndToken -> Review -> (Result Http.Error Review -> msg) -> Cmd msg
-postDisike uAndT review msg =
-  Jwt.Http.post
-    uAndT.token
-    { url = apiRoot ++ "/api/reviews/ ++ id ++ /like"
-    , body = Http.emptyBody
-    , expect = Http.expectJson msg Review.decoder
-    } 
+postDislike : UserAndToken -> Review -> (Result Http.Error Review -> msg) -> Cmd msg
+postDislike uAndT review msg =
+  let
+    id = String.fromInt <| Maybe.withDefault (-1) review.id 
+  in
+    Jwt.Http.post
+      uAndT.token
+      { url = apiRoot ++ "/api/reviews/" ++ id ++ "/dislike"
+      , body = Http.emptyBody
+      , expect = Http.expectJson msg Review.decoder
+      } 
 
 postComment : UserAndToken -> Review -> String -> (Result Http.Error Review -> msg) -> Cmd msg
 postComment uAndT review comment msg =
@@ -137,10 +142,11 @@ postComment uAndT review comment msg =
     body =
       Review.encodeComment
         { id = Nothing, text = comment, user = uAndT.user }
+    id = String.fromInt <| Maybe.withDefault (-1) review.id 
   in
     Jwt.Http.post
       uAndT.token
-      { url = apiRoot ++ "/api/reviews/ ++ review.id ++ /comments"
+      { url = apiRoot ++ "/api/reviews/" ++ id ++ "/comments"
       , body = Http.jsonBody body
       , expect = Http.expectJson msg Review.decoder
       } 

@@ -21,6 +21,7 @@ type Msg
   | GotSongResults (Result Http.Error (List MDB.Song))
   | OnAlbumResultClicked MDB.Album
   | OnSongResultClicked MDB.Song
+  | OnSubjectClear
 
 type alias Form msg =
   { text : Maybe String
@@ -37,7 +38,7 @@ resultsLimit = 2
 minSearchLength = 2
 
 init : (Msg -> msg) -> msg -> Form msg
-init toOuterMsg onPress = 
+init toOuterMsg onPress =
   { text = Nothing
   , stars = Nothing
   , subject = Nothing
@@ -76,18 +77,18 @@ update msg model =
       case res of
         Ok results ->
           ({ model | albumResults = List.take resultsLimit results }, Cmd.none)
-        Err results -> (model, Cmd.none) 
+        Err results -> (model, Cmd.none)
     GotSongResults res ->
-      case Debug.log "^^^" res of
+      case res of
         Ok results ->
           ({ model | songResults = List.take resultsLimit results }, Cmd.none)
-        Err results -> (model, Cmd.none) 
+        Err results -> (model, Cmd.none)
     OnAlbumResultClicked album ->
       ({ model
          | subject = Just (albumResultToSubject album)
          , albumResults = []
          , songResults = []
-         , subjectQuery = album.artist ++ " - " ++ album.name 
+         , subjectQuery = ""
        }
       , Cmd.none
       )
@@ -96,8 +97,12 @@ update msg model =
          | subject = Just (songResultToSubject song)
          , albumResults = []
          , songResults = []
-         , subjectQuery = song.artist ++ " - " ++ song.name
+         , subjectQuery = ""
        }
+      , Cmd.none
+      )
+    OnSubjectClear ->
+      ({ model | subject = Nothing }
       , Cmd.none
       )
 
@@ -139,7 +144,7 @@ view form =
 viewSubjectForm : Form msg -> Element msg
 viewSubjectForm form =
   let
-    searchBox = 
+    searchBox =
       Input.text [E.width E.fill]
         { onChange = \s -> form.toOuterMsg (OnSubjectQueryChanged s)
         , text = form.subjectQuery
@@ -153,10 +158,23 @@ viewSubjectForm form =
       E.column [S.paddingSmall, E.width E.fill, E.alignTop] <|
               List.map (viewSongResult form.toOuterMsg) form.songResults
   in
-    E.column [S.paddingSmall] <|
-      case (List.isEmpty form.albumResults, List.isEmpty form.songResults) of
-        (True, True) -> [searchBox]
-        _ -> [searchBox, E.row [] [albums, songs]]
+    case form.subject of
+      Just subject ->
+        E.column [S.paddingSmall, E.width E.fill] <|
+          [ S.subjectBox
+              { artist = subject.artist
+              , title = subject.title
+              , image = subject.image
+              }
+          , S.button "clear" <| Just <| form.toOuterMsg OnSubjectClear
+          ]
+      Nothing ->
+        E.column [S.paddingSmall, E.width E.fill] <|
+          case (List.isEmpty form.albumResults, List.isEmpty form.songResults) of
+            (True, True) ->
+              [searchBox]
+            _ ->
+              [searchBox, E.row [] [albums, songs]]
 
 viewAlbumResult : (Msg -> msg) -> MDB.Album -> Element msg
 viewAlbumResult toOuterMsg album =
@@ -187,14 +205,14 @@ viewSongResult toOuterMsg song =
     }
 
 viewStars : Form msg -> Element msg
-viewStars form = 
-  case form.stars of 
+viewStars form =
+  case form.stars of
     Just n ->
-      E.row [ E.width E.fill ] <| 
+      E.row [ E.width E.fill ] <|
         List.map2 (\f x -> f (form.toOuterMsg (OnStarsChanged x)))
           ((List.repeat n redStar) ++ (List.repeat (5 - n) greyStar)) [1, 2, 3, 4, 5]
     Nothing ->
-      E.row [ E.width E.fill ] <| 
+      E.row [ E.width E.fill ] <|
         List.map2 (\f x -> f (form.toOuterMsg (OnStarsChanged x)))
           (List.repeat 5 greyStar) [1, 2, 3, 4, 5]
 
@@ -202,7 +220,7 @@ redStar : msg -> Element msg
 redStar msg =
   Input.button [ E.width E.fill ]
     { onPress = Just msg
-    , label = 
+    , label =
         E.image [ E.width E.fill, E.height E.fill ]
           { src = "/assets/images/red-star.png"
           , description = "red star" }
@@ -212,7 +230,7 @@ greyStar : msg -> Element msg
 greyStar msg =
   Input.button [ E.width E.fill ]
     { onPress = Just msg
-    , label = 
+    , label =
         E.image [ E.width E.fill, E.height E.fill ]
           { src = "/assets/images/grey-star.png"
           , description = "grey star" }
@@ -222,9 +240,9 @@ viewSubmitButton : Form msg -> Element msg
 viewSubmitButton form = S.button "Post!" <| Just form.onPress
 
 viewMultiline : Form msg -> Element msg
-viewMultiline form = E.el [ S.paddingSmall ] <|
+viewMultiline form = E.el [ S.paddingSmall, E.width E.fill ] <|
   Input.multiline
-    []
+    [E.width E.fill]
     { onChange = \s -> form.toOuterMsg (OnTextChanged s)
     , text = Maybe.withDefault "" form.text
     , placeholder = Just (Input.placeholder [] (E.text "type your review here!"))
@@ -237,7 +255,7 @@ convertToReview form user =
   case form.stars of
     Just stars ->
       let
-        subject = 
+        subject =
           case form.subject of
             Just s -> s
             Nothing ->

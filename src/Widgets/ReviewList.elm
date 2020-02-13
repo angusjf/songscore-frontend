@@ -47,7 +47,7 @@ update msg model session =
     OnDislike review ->
       case session.userAndToken of
         Just uAndT ->
-          (model, session, Api.postLike uAndT review ReviewDisliked)
+          (model, session, Api.postDislike uAndT review ReviewDisliked)
         Nothing -> 
           (model, session, Cmd.none)
     OnCommentSubmit review comment ->
@@ -62,15 +62,15 @@ update msg model session =
         Err _ -> (model, session, Cmd.none)
     ReviewLiked result ->
       case result of
-        Ok review -> (deleteReview review model, session, Cmd.none)
+        Ok review -> (updateReview review model, session, Cmd.none)
         Err _ -> (model, session, Cmd.none)
     ReviewDisliked result ->
       case result of
-        Ok review -> (deleteReview review model, session, Cmd.none)
+        Ok review -> (updateReview review model, session, Cmd.none)
         Err _ -> (model, session, Cmd.none)
     CommentSubmitted result ->
       case result of
-        Ok review -> (deleteReview review model, session, Cmd.none)
+        Ok review -> (updateReview review model, session, Cmd.none)
         Err _ -> (model, session, Cmd.none)
     OnReviewCommentChanged review newComment ->
       (setComment review newComment model, session, Cmd.none)
@@ -81,7 +81,7 @@ setComment review newComment dict =
 
 deleteReview : Review -> Model -> Model
 deleteReview review dict =
-  List.filter (\(r, c) -> r.id == review.id) dict
+  List.filter (\(r, c) -> r.id /= review.id) dict
 
 updateReview : Review -> Model -> Model
 updateReview review dict =

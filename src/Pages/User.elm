@@ -25,7 +25,7 @@ type Msg
 init : Session.Data -> String -> (Model, Session.Data, Cmd Msg)
 init session username =
   let
-    (reviewListModel, _, rlCmd) = ReviewList.init session []
+    (reviewListModel, _, _) = ReviewList.init session []
     model =
       { user = Nothing
       , reviewListModel = reviewListModel
@@ -45,7 +45,7 @@ update : Msg -> Model -> Session.Data -> (Model, Session.Data, Cmd Msg)
 update msg model session =
   case msg of 
     GotReviews result ->
-      case Debug.log "£££££" result of 
+      case result of 
         Ok reviews ->
           ( { model
               | reviewListModel = ReviewList.setReviews reviews

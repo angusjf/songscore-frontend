@@ -72,7 +72,7 @@ update msg model session =
             ({ model | problems = [] }, session, Api.postLogin creds Completed)
         Err problems -> ({ model | problems = problems }, session, Cmd.none)
     Completed result ->
-      case (Debug.log "got result" result) of
+      case result of
         Ok userAndToken ->
           let
             oldSession = session

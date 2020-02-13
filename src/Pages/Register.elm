@@ -136,7 +136,10 @@ update msg model session =
 
 validate : Model -> Result (List Problem) NewUser
 validate model =
-  if model.password == model.passwordRepeat && (Maybe.withDefault False model.usernameAvailable)
+  if model.password == model.passwordRepeat &&
+     (Maybe.withDefault False model.usernameAvailable) &&
+     not (String.contains " " model.username) &&
+     String.length model.username > 1
     then Ok
       { username = model.username
       , password = model.password

@@ -6,6 +6,7 @@ import Json.Decode as D
 import User exposing (User)
 import Review exposing (Review)
 import Jwt.Http
+import Url.Builder as Builder
 
 apiRoot : String
 apiRoot = ""
@@ -168,3 +169,39 @@ getUsernameAvailability username msg =
     { url = apiRoot ++ "/api/users/" ++ username ++ "/available"
     , expect = Http.expectJson msg D.bool
     }
+
+type alias SubjectResult =
+  { name : String
+  , artist : String
+  , imageUrl : String
+  , kind : String
+  , spotifyId : String
+  }
+
+searchSubjects : String -> Int
+      -> (Result Http.Error (List SubjectResult) -> msg) -> Cmd msg
+searchSubjects query limit msg =
+  let
+    url =
+      Builder.crossOrigin
+        apiRoot
+        [ "subjects", "search" ]
+        [ Builder.string "q" query
+        , Builder.int "limit" limit
+        ]
+  in 
+    Http.get
+      { url = url
+      , expect = Http.expectJson msg subjectResultsDecoder
+      }
+
+subjectResultsDecoder : D.Decoder (List SubjectResult)
+subjectResultsDecoder = 
+  D.at [ "tracks", "items"] <|
+    D.list <|
+      D.map5 SubjectResult
+       (D.field "name" D.string)
+       (D.field "artists" <| D.index 0 <| D.field "name" D.string)
+       (D.at ["album", "images"] <| D.index 0 <| D.field "url" D.string)
+       (D.field "type" D.string)
+       (D.field "id" D.string)

@@ -13,6 +13,7 @@ import Browser
 red = E.rgb 1.0 0.4 0.4
 white = E.rgb 1.0 1.0 1.0
 veryLightAlpha = E.rgba 0 0 0 0.1
+background = E.rgb 0.1 0.1 0.1
 
 roundedSmall = Border.rounded 8
 
@@ -107,7 +108,7 @@ onEnter msg =
 
 skeleton : Element msg -> Element msg -> Html.Html msg
 skeleton bar body =
-  E.layout [ E.width E.fill ] <|
+  E.layout [ E.width E.fill, Background.color background ] <|
     E.column
       [ E.width (E.maximum 1000 E.fill)
       , E.centerX

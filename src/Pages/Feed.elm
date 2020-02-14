@@ -10,7 +10,6 @@ import Review exposing (Review)
 import Api
 import Http
 import Route
-import MusicDatabase as MDB
 import Styles as S
 
 type alias Model = 

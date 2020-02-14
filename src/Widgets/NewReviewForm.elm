@@ -10,17 +10,15 @@ import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Styles as S
-import MusicDatabase as MDB
 import Http
+import Api
 
 type Msg
   = OnTextChanged String
   | OnStarsChanged Int
   | OnSubjectQueryChanged String
-  | GotAlbumResults (Result Http.Error (List MDB.Album))
-  | GotSongResults (Result Http.Error (List MDB.Song))
-  | OnAlbumResultClicked MDB.Album
-  | OnSongResultClicked MDB.Song
+  | GotResults (Result Http.Error (List Api.SubjectResult))
+  | OnResultClicked Api.SubjectResult
   | OnSubjectClear
 
 type alias Form msg =
@@ -28,13 +26,12 @@ type alias Form msg =
   , stars : Maybe Int
   , subject : Maybe Subject
   , subjectQuery : String
-  , albumResults : List MDB.Album
-  , songResults : List MDB.Song
+  , results : List Api.SubjectResult
   , onPress : msg
   , toOuterMsg : Msg -> msg
   }
 
-resultsLimit = 2
+resultsLimit = 4
 minSearchLength = 2
 
 init : (Msg -> msg) -> msg -> Form msg
@@ -43,8 +40,7 @@ init toOuterMsg onPress =
   , stars = Nothing
   , subject = Nothing
   , subjectQuery = ""
-  , albumResults = []
-  , songResults = []
+  , results = []
   , onPress = onPress
   , toOuterMsg = toOuterMsg
   }
@@ -60,43 +56,29 @@ update msg model =
           if String.length model.subjectQuery < minSearchLength
             then ( { model
                      | subjectQuery = new
-                     , songResults = []
-                     , albumResults = []
+                     , results = []
                    }
                  , Cmd.none
                  )
             else ( { model | subjectQuery = new }
                  , Cmd.batch
-                     [ MDB.searchAlbums model.subjectQuery resultsLimit <|
-                         \x -> model.toOuterMsg (GotAlbumResults x)
-                     , MDB.searchSongs model.subjectQuery <|
-                         \x -> model.toOuterMsg (GotSongResults x)
+                     [ Api.searchSubjects model.subjectQuery resultsLimit <|
+                         \x -> model.toOuterMsg (GotResults x)
                      ]
                  )
-    GotAlbumResults res ->
+    GotResults res ->
       case res of
         Ok results ->
-          ({ model | albumResults = List.take resultsLimit results }, Cmd.none)
+          ( { model
+              | results = List.take resultsLimit results
+            }
+          , Cmd.none
+          )
         Err results -> (model, Cmd.none)
-    GotSongResults res ->
-      case res of
-        Ok results ->
-          ({ model | songResults = List.take resultsLimit results }, Cmd.none)
-        Err results -> (model, Cmd.none)
-    OnAlbumResultClicked album ->
+    OnResultClicked track ->
       ({ model
-         | subject = Just (albumResultToSubject album)
-         , albumResults = []
-         , songResults = []
-         , subjectQuery = ""
-       }
-      , Cmd.none
-      )
-    OnSongResultClicked song ->
-      ({ model
-         | subject = Just (songResultToSubject song)
-         , albumResults = []
-         , songResults = []
+         | subject = Just (resultToSubject track)
+         , results = []
          , subjectQuery = ""
        }
       , Cmd.none
@@ -106,22 +88,18 @@ update msg model =
       , Cmd.none
       )
 
-songResultToSubject : MDB.Song -> Subject
-songResultToSubject song =
+resultToSubject : Api.SubjectResult -> Subject
+resultToSubject result =
   { id = Nothing
-  , image = Just song.imageUrl
-  , kind = Just Song
-  , title = song.name
-  , artist = Just song.artist
-  }
-
-albumResultToSubject : MDB.Album -> Subject
-albumResultToSubject song =
-  { id = Nothing
-  , image = Just song.imageUrl
-  , kind = Just Album
-  , title = song.name
-  , artist = Just song.artist
+  , image = Just result.imageUrl
+  , kind = 
+      if result.kind == "Album" then
+          Just Album
+      else
+          Just Song
+  , title = result.name
+  , artist = Just result.artist
+  --, spotifyId = result.spotifyId TODO
   }
 
 view : Form msg -> Element msg
@@ -151,12 +129,9 @@ viewSubjectForm form =
         , placeholder = Just (Input.placeholder [] (E.text "search for a subject"))
         , label = Input.labelHidden "Subject"
         }
-    albums =
+    results =
       E.column [S.paddingSmall, E.width E.fill, E.alignTop] <|
-               List.map (viewAlbumResult form.toOuterMsg) form.albumResults
-    songs =
-      E.column [S.paddingSmall, E.width E.fill, E.alignTop] <|
-              List.map (viewSongResult form.toOuterMsg) form.songResults
+               List.map (viewResult form.toOuterMsg) form.results
   in
     case form.subject of
       Just subject ->
@@ -170,37 +145,22 @@ viewSubjectForm form =
           ]
       Nothing ->
         E.column [S.paddingSmall, E.width E.fill] <|
-          case (List.isEmpty form.albumResults, List.isEmpty form.songResults) of
-            (True, True) ->
+          if List.isEmpty form.results then
               [searchBox]
-            _ ->
-              [searchBox, E.row [] [albums, songs]]
+          else
+              [searchBox, results]
 
-viewAlbumResult : (Msg -> msg) -> MDB.Album -> Element msg
-viewAlbumResult toOuterMsg album =
+viewResult : (Msg -> msg) -> Api.SubjectResult -> Element msg
+viewResult toOuterMsg result =
   Input.button [E.width E.fill]
-    { onPress = Just <| toOuterMsg (OnAlbumResultClicked album)
+    { onPress = Just <| toOuterMsg (OnResultClicked result)
     , label =
         E.column [ E.width E.fill ]
           [ E.image S.squareMedium
-            { src = album.imageUrl
+            { src = result.imageUrl
             , description = ""
             }
-          , E.paragraph [ E.width E.fill ] <| [ S.text album.name ]
-          ]
-    }
-
-viewSongResult : (Msg -> msg) -> MDB.Song -> Element msg
-viewSongResult toOuterMsg song =
-  Input.button [E.width E.fill]
-    { onPress = Just <| toOuterMsg (OnSongResultClicked song)
-    , label =
-        E.column [E.width E.fill]
-          [ E.image S.squareMedium
-            { src = song.imageUrl
-            , description = ""
-            }
-          , E.paragraph [ E.width E.fill ] <| [ S.text song.name ]
+          , E.paragraph [ E.width E.fill ] <| [ S.text result.name ]
           ]
     }
 

@@ -2,6 +2,7 @@ module Review exposing (..)
 
 import Json.Decode as D
 import Json.Encode as E
+import Json.Decode.Pipeline as P
 import Subject exposing (Subject)
 import User exposing (User)
 
@@ -14,6 +15,7 @@ type alias Review =
   , comments : List Comment
   , likes : List User
   , dislikes : List User
+  , createdAt : Maybe Int
   }
 
 type alias Comment =
@@ -24,15 +26,16 @@ type alias Comment =
 
 decoder : D.Decoder Review
 decoder =
-  D.map8 Review
-    (D.maybe (D.field "id" D.int))
-    (D.maybe (D.field "text" D.string))
-    (D.field "stars" D.int)
-    (D.field "user" User.decoder)
-    (D.field "subject" Subject.decoder)
-    (D.field "comments" (D.list decodeComment))
-    (D.field "likes" (D.list User.decoder))
-    (D.field "dislikes" (D.list User.decoder))
+  D.succeed Review
+    |> P.required "id" (D.nullable D.int)
+    |> P.optional "text" (D.maybe D.string) Nothing
+    |> P.required "stars" D.int
+    |> P.required "user" User.decoder
+    |> P.required "subject" Subject.decoder
+    |> P.required "comments" (D.list decodeComment)
+    |> P.required "likes" (D.list User.decoder)
+    |> P.required "dislikes" (D.list User.decoder)
+    |> P.required "createdAt" (D.nullable D.int)
 
 decodeComment : D.Decoder Comment
 decodeComment =
@@ -52,6 +55,10 @@ encode review =
       case review.text of
         Just x -> E.string x
         Nothing -> E.null
+    createdAt =
+      case review.createdAt of
+        Just c -> E.int c
+        Nothing -> E.null
   in
     E.object
       [ ("id", id)
@@ -62,6 +69,7 @@ encode review =
       , ("likes", (E.list User.encode review.likes))
       , ("dislikes", (E.list User.encode review.dislikes))
       , ("comment", (E.list encodeComment review.comments))
+      , ("createdAt", createdAt)
       ]
 
 encodeComment : Comment -> E.Value

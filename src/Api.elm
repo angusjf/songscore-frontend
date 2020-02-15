@@ -9,7 +9,7 @@ import Jwt.Http
 import Url.Builder as Builder
 
 apiRoot : String
-apiRoot = ""
+apiRoot = "/api"
 -------- "https://songscore.herokuapp.com"
 -------- "http://localhost:8081"
 -------- ""
@@ -48,7 +48,7 @@ postUser newUser msg =
         ]
   in
     Http.post
-      { url = apiRoot ++ "/api/users"
+      { url = apiRoot ++ "/users"
       , body = body
       , expect = Http.expectJson msg userAndTokenDecoder
       }
@@ -64,7 +64,7 @@ postLogin creds msg =
         ]
   in
     Http.post
-      { url = apiRoot ++ "/api/auth"
+      { url = apiRoot ++ "/auth"
       , body = body
       , expect = Http.expectJson msg userAndTokenDecoder
       }
@@ -73,7 +73,7 @@ getFeed : UserAndToken -> (Result Http.Error (List Review) -> msg) -> Cmd msg
 getFeed userAndToken msg =
   Jwt.Http.get
     userAndToken.token
-    { url = apiRoot ++ "/api/feeds/" ++ userAndToken.user.username
+    { url = apiRoot ++ "/feeds/" ++ userAndToken.user.username
     , expect = Http.expectJson msg (D.list Review.decoder)
     }
 
@@ -81,7 +81,7 @@ postReview : UserAndToken -> Review -> (Result Http.Error Review -> msg) -> Cmd 
 postReview userAndToken review msg =
   Jwt.Http.post
     userAndToken.token
-    { url = apiRoot ++ "/api/reviews"
+    { url = apiRoot ++ "/reviews"
     , body = Http.jsonBody (Review.encode review)
     , expect = Http.expectJson msg Review.decoder
     }
@@ -95,21 +95,21 @@ maybeTokenGet userAndToken =
 getUserReviews : Maybe UserAndToken -> User -> (Result Http.Error (List Review) -> msg) -> Cmd msg
 getUserReviews userAndToken user msg =
   maybeTokenGet userAndToken
-    { url = apiRoot ++ "/api/users/" ++ user.username ++ "/reviews"
+    { url = apiRoot ++ "/users/" ++ user.username ++ "/reviews"
     , expect = Http.expectJson msg (D.list Review.decoder)
     }
 
 getReview : Maybe UserAndToken -> Int -> (Result Http.Error Review -> msg) -> Cmd msg
 getReview userAndToken id msg =
   maybeTokenGet userAndToken
-    { url = apiRoot ++ "/api/reviews/" ++ (String.fromInt id)
+    { url = apiRoot ++ "/reviews/" ++ (String.fromInt id)
     , expect = Http.expectJson msg Review.decoder
     }
 
 getUser : Maybe UserAndToken -> String -> (Result Http.Error User -> msg) -> Cmd msg
 getUser userAndToken username msg =
   maybeTokenGet userAndToken
-    { url = apiRoot ++ "/api/users/" ++ username
+    { url = apiRoot ++ "/users/" ++ username
     , expect = Http.expectJson msg User.decoder
     }
 
@@ -120,7 +120,7 @@ postLike uAndT review msg =
   in
     Jwt.Http.post
       uAndT.token
-      { url = apiRoot ++ "/api/reviews/" ++ id ++ "/like"
+      { url = apiRoot ++ "/reviews/" ++ id ++ "/like"
       , body = Http.emptyBody
       , expect = Http.expectJson msg Review.decoder
       } 
@@ -132,7 +132,7 @@ postDislike uAndT review msg =
   in
     Jwt.Http.post
       uAndT.token
-      { url = apiRoot ++ "/api/reviews/" ++ id ++ "/dislike"
+      { url = apiRoot ++ "/reviews/" ++ id ++ "/dislike"
       , body = Http.emptyBody
       , expect = Http.expectJson msg Review.decoder
       } 
@@ -147,7 +147,7 @@ postComment uAndT review comment msg =
   in
     Jwt.Http.post
       uAndT.token
-      { url = apiRoot ++ "/api/reviews/" ++ id ++ "/comments"
+      { url = apiRoot ++ "/reviews/" ++ id ++ "/comments"
       , body = Http.jsonBody body
       , expect = Http.expectJson msg Review.decoder
       } 
@@ -159,14 +159,14 @@ deleteReview uAndT review msg =
   in
     Jwt.Http.delete
       uAndT.token
-      { url = apiRoot ++ "/api/reviews/" ++ id
+      { url = apiRoot ++ "/reviews/" ++ id
       , expect = Http.expectJson msg Review.decoder
       } 
 
 getUsernameAvailability : String -> (Result Http.Error Bool -> msg) -> Cmd msg
 getUsernameAvailability username msg =
   Http.get
-    { url = apiRoot ++ "/api/users/" ++ username ++ "/available"
+    { url = apiRoot ++ "/users/" ++ username ++ "/available"
     , expect = Http.expectJson msg D.bool
     }
 
@@ -174,6 +174,7 @@ type alias SubjectResult =
   { name : String
   , artist : String
   , imageUrl : String
+  , imageUrlSmall : String
   , kind : String
   , spotifyId : String
   }
@@ -183,15 +184,14 @@ searchSubjects : String -> Int
 searchSubjects query limit msg =
   let
     url =
-      Builder.crossOrigin
-        apiRoot
+      Builder.absolute
         [ "subjects", "search" ]
         [ Builder.string "q" query
         , Builder.int "limit" limit
         ]
   in 
     Http.get
-      { url = url
+      { url = apiRoot ++ url
       , expect = Http.expectJson msg subjectResultsDecoder
       }
 
@@ -199,9 +199,10 @@ subjectResultsDecoder : D.Decoder (List SubjectResult)
 subjectResultsDecoder = 
   D.at [ "tracks", "items"] <|
     D.list <|
-      D.map5 SubjectResult
+      D.map6 SubjectResult
        (D.field "name" D.string)
        (D.field "artists" <| D.index 0 <| D.field "name" D.string)
        (D.at ["album", "images"] <| D.index 0 <| D.field "url" D.string)
+       (D.at ["album", "images"] <| D.index 2 <| D.field "url" D.string)
        (D.field "type" D.string)
        (D.field "id" D.string)

@@ -43,7 +43,7 @@ update msg model session =
     OnNRFSubmitPressed ->
       case session.userAndToken of
         Just uAndT -> 
-          case NRF.convertToReview model.nrf uAndT.user of
+          case Debug.log "newReview: " <| NRF.convertToReview model.nrf uAndT.user of
             Just newReview ->
               (model, session, Api.postReview uAndT newReview GotNewReview)
             Nothing -> 

@@ -53,7 +53,7 @@ update msg model =
     OnStarsChanged n ->
       ({ model | stars = Just n }, Cmd.none)
     OnSubjectQueryChanged new ->
-          if String.length model.subjectQuery < minSearchLength
+          if String.length new < minSearchLength
             then ( { model
                      | subjectQuery = new
                      , results = []
@@ -61,10 +61,8 @@ update msg model =
                  , Cmd.none
                  )
             else ( { model | subjectQuery = new }
-                 , Cmd.batch
-                     [ Api.searchSubjects model.subjectQuery resultsLimit <|
+                 , Api.searchSubjects new resultsLimit <|
                          \x -> model.toOuterMsg (GotResults x)
-                     ]
                  )
     GotResults res ->
       case res of
@@ -91,15 +89,15 @@ update msg model =
 resultToSubject : Api.SubjectResult -> Subject
 resultToSubject result =
   { id = Nothing
-  , image = Just result.imageUrl
+  , image = result.imageUrl
   , kind = 
       if result.kind == "Album" then
-          Just Album
+          Album
       else
-          Just Song
+          Song
   , title = result.name
-  , artist = Just result.artist
-  --, spotifyId = result.spotifyId TODO
+  , artist = result.artist
+  , spotifyId = result.spotifyId
   }
 
 view : Form msg -> Element msg
@@ -155,12 +153,16 @@ viewResult toOuterMsg result =
   Input.button [E.width E.fill]
     { onPress = Just <| toOuterMsg (OnResultClicked result)
     , label =
-        E.column [ E.width E.fill ]
-          [ E.image S.squareMedium
-            { src = result.imageUrl
+        E.row [ E.width E.fill, S.spacingSmall, S.paddingSmall ]
+          [ E.image S.squareTiny
+            { src = result.imageUrlSmall
             , description = ""
             }
-          , E.paragraph [ E.width E.fill ] <| [ S.text result.name ]
+          , E.column
+              [ E.width E.fill ]
+              [ E.paragraph [] [ S.text result.name ]
+              , E.paragraph [] [ S.text result.artist ]
+              ]
           ]
     }
 
@@ -212,28 +214,17 @@ viewMultiline form = E.el [ S.paddingSmall, E.width E.fill ] <|
 
 convertToReview : Form msg -> User -> Maybe Review
 convertToReview form user =
-  case form.stars of
-    Just stars ->
-      let
-        subject =
-          case form.subject of
-            Just s -> s
-            Nothing ->
-              { id = Nothing
-              , image = Nothing
-              , kind = Nothing
-              , title = form.subjectQuery
-              , artist = Nothing
-              }
-      in
-        Just
-          { id = Nothing
-          , text = form.text
-          , stars = stars
-          , user = user
-          , subject = subject
-          , comments = []
-          , likes = []
-          , dislikes = []
-          }
-    Nothing -> Nothing
+  case (form.stars, form.subject) of
+    (Just stars, Just subject) ->
+      Just
+        { id = Nothing
+        , text = form.text
+        , stars = stars
+        , user = user
+        , subject = subject
+        , comments = []
+        , likes = []
+        , dislikes = []
+        , createdAt = Nothing
+        }
+    (_, _) -> Nothing

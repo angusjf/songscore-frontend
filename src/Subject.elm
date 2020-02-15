@@ -5,32 +5,33 @@ import Json.Encode as E
 
 type alias Subject =
   { id : Maybe Int
-  , image : Maybe String
-  , kind : Maybe SubjectKind
+  , image : String
+  , kind : SubjectKind
   , title : String
-  , artist : Maybe String
+  , artist : String
+  , spotifyId : String
   }
 
 type SubjectKind = Album | Song
 
 decoder : D.Decoder Subject
 decoder =
-  D.map5 Subject
+  D.map6 Subject
     (D.maybe (D.field "id" D.int))
-    (D.maybe (D.field "image" D.string))
+    (D.field "image" D.string)
     (D.field "kind" subjectKindDecoder)
     (D.field "title" D.string)
-    (D.maybe (D.field "artist" D.string))
+    (D.field "artist" D.string)
+    (D.field "spotifyId" D.string)
 
-subjectKindDecoder : D.Decoder (Maybe SubjectKind)
+subjectKindDecoder : D.Decoder (SubjectKind)
 subjectKindDecoder = D.map toSubjectKind D.string
 
-toSubjectKind : String -> Maybe SubjectKind
+toSubjectKind : String -> SubjectKind
 toSubjectKind kind =
   case kind of
-    "Album" -> Just Album
-    "Song" -> Just Song
-    _ -> Nothing
+    "Album" -> Album
+    _      -> Song
 
 encode : Subject -> E.Value
 encode subject =
@@ -38,21 +39,15 @@ encode subject =
     id = case subject.id of
       Just i -> E.int i
       Nothing -> E.null
-    image = case subject.image of
-      Just img -> E.string img
-      Nothing -> E.null
     kind = case subject.kind of
-      Just Album -> E.string "Album"
-      Just Song -> E.string "Song"
-      Nothing -> E.null
-    artist = case subject.artist of
-      Just a -> E.string a
-      Nothing -> E.null
+      Album -> E.string "Album"
+      Song -> E.string "Song"
   in
     E.object
       [ ("id", id)
-      , ("image", image)
+      , ("image", E.string subject.image)
       , ("kind", kind)
       , ("title", E.string subject.title)
-      , ("artist", artist)
+      , ("artist", E.string subject.artist)
+      , ("spotifyId", E.string subject.spotifyId)
       ]

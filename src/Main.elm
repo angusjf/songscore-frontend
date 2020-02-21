@@ -10,12 +10,14 @@ import Pages.Feed as Feed
 import Pages.NotFound as NotFound
 import Pages.User as User
 import Pages.Review as Review
+import Pages.Settings as Settings
 import Session
 import Api exposing (UserAndToken)
 import Route
 import Page
 import Widgets.Navbar as Navbar
 import Styles as S exposing (skeleton)
+import Time
 
 type alias Model = { page : Page, session : Session.Data }
 
@@ -26,6 +28,7 @@ type Page
   | Login Login.Model
   | User User.Model
   | Review Review.Model
+  | Settings Settings.Model
 
 type Msg
   = LinkClicked Browser.UrlRequest
@@ -35,6 +38,7 @@ type Msg
   | LoginMsg Login.Msg
   | UserMsg User.Msg
   | ReviewMsg Review.Msg
+  | SettingsMsg Settings.Msg
   | NavbarMsg Navbar.Msg
   | None
 
@@ -79,6 +83,11 @@ update message model =
         Review innerModel ->
           stepReview model <| Review.update msg innerModel model.session
         _ -> (model, Cmd.none)
+    SettingsMsg msg ->
+      case model.page of
+        Settings innerModel ->
+          stepSettings model <| Settings.update msg innerModel model.session
+        _ -> (model, Cmd.none)
     NavbarMsg msg ->
       stepNavbar model <| Navbar.update msg model.session
 
@@ -97,6 +106,8 @@ stepUrl url model =
       stepUser model (User.init model.session username)
     Just (Route.Review username id) ->
       stepReview model (Review.init model.session username id)
+    Just Route.Settings ->
+      stepSettings model (Settings.init model.session)
 
 stepRegister : Model -> (Register.Model, Session.Data, Cmd Register.Msg) -> (Model, Cmd Msg)
 stepRegister model (registerModel, session, registerCmd) =
@@ -128,6 +139,12 @@ stepReview model (reviewModel, session, reviewCmd) =
   , Cmd.map ReviewMsg reviewCmd
   )
 
+stepSettings : Model -> (Settings.Model, Session.Data, Cmd Settings.Msg) -> (Model, Cmd Msg)
+stepSettings model (settingsModel, session, settingsCmd) =
+  ( { page = Settings settingsModel, session = session }
+  , Cmd.map SettingsMsg settingsCmd
+  )
+
 stepNavbar : Model -> (Session.Data, Cmd Msg) -> (Model, Cmd Msg)
 stepNavbar model (session, cmd) = ({ model | session = session }, cmd)
 
@@ -148,11 +165,16 @@ view model =
           Page.map UserMsg <| User.view model.session innerModel
         Review innerModel ->
           Page.map ReviewMsg <| Review.view model.session innerModel
+        Settings innerModel ->
+          Page.map SettingsMsg <| Settings.view model.session innerModel
     bar = Navbar.view NavbarMsg model.session
   in
     { title = "SongScore: " ++ title
     , body = [ S.skeleton bar body ]
     }
+
+subscriptions : a -> Sub Msg
+subscriptions _ = Sub.none
 
 main : Program (Maybe UserAndToken) Model Msg
 main =
@@ -160,7 +182,7 @@ main =
     { init = init
     , view = view
     , update = update
-    , subscriptions = \_ -> Sub.none
+    , subscriptions = subscriptions
     , onUrlChange = UrlChanged
     , onUrlRequest = LinkClicked
     }

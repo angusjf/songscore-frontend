@@ -25,13 +25,19 @@ type Msg
 init : Session.Data -> String -> (Model, Session.Data, Cmd Msg)
 init session username =
   let
-    (reviewListModel, _, _) = ReviewList.init session []
+    (reviewListModel, rlSession, rlCmd) = ReviewList.init session []
     model =
       { user = Nothing
       , reviewListModel = reviewListModel
       }
   in
-    (model, session, Api.getUser session.userAndToken username GotUser)
+    ( model
+    , rlSession
+    , Cmd.batch
+        [ Api.getUser session.userAndToken username GotUser
+        , Cmd.map ReviewListMsg rlCmd
+        ]
+    )
 
 stepReviewList : Model ->
                  (ReviewList.Model, Session.Data, Cmd ReviewList.Msg) ->
@@ -45,10 +51,14 @@ update : Msg -> Model -> Session.Data -> (Model, Session.Data, Cmd Msg)
 update msg model session =
   case msg of 
     GotReviews result ->
-      case result of 
+      case Debug.log "GotResult" result of 
         Ok reviews ->
+          let
+            reviewListModel = model.reviewListModel
+            newRLM = { reviewListModel | reviews = ReviewList.setReviews reviews }
+          in
           ( { model
-              | reviewListModel = ReviewList.setReviews reviews
+              | reviewListModel = newRLM
             }
           , session
           , Cmd.none

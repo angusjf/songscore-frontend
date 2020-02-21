@@ -22,13 +22,19 @@ type Msg
 init : Session.Data -> String -> Int -> (Model, Session.Data, Cmd Msg)
 init session username id =
   let
-    (reviewListModel, _, _) = ReviewList.init session []
+    (reviewListModel, rlSession, rlCmd) = ReviewList.init session []
     model =
       { reviewListModel = reviewListModel
       , review = Nothing
       }
   in
-    (model, session, Api.getReview session.userAndToken id GotReview)
+    ( model
+    , rlSession
+    , Cmd.batch
+        [ Api.getReview session.userAndToken id GotReview
+        , Cmd.map ReviewListMsg rlCmd
+        ]
+    )
 
 stepReviewList : Model ->
                  (ReviewList.Model, Session.Data, Cmd ReviewList.Msg) ->
@@ -45,13 +51,18 @@ update msg model session =
     GotReview result ->
       case result of 
         Ok review ->
-          ({ model
-              | reviewListModel = ReviewList.setReviews [review]
-              , review = Just review
-           }
-          , session
-          , Cmd.none
-          )
+          let
+            reviewListModel = model.reviewListModel
+            newRLM = { reviewListModel
+                        | reviews = ReviewList.setReviews [review] }
+          in
+            ({ model
+                | reviewListModel = newRLM
+                , review = Just review
+             }
+            , session
+            , Cmd.none
+            )
         Err _ ->
           (model, session, Cmd.none)
     ReviewListMsg rlMsg ->

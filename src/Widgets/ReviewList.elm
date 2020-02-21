@@ -7,8 +7,13 @@ import Review exposing (Review, Comment)
 import Session
 import Api
 import Http
+import Time
+import Task
 
-type alias Model = List (Review, String)
+type alias Model = 
+  { reviews : List (Review, String)
+  , currentTime : Maybe Time.Posix
+  }
 
 type Msg
   = OnDelete Review
@@ -20,18 +25,27 @@ type Msg
   | ReviewDisliked (Result Http.Error Review)
   | CommentSubmitted (Result Http.Error Review)
   | OnReviewCommentChanged Review String
+  | GotTime Time.Posix
 
 init : Session.Data -> List Review -> (Model, Session.Data, Cmd Msg)
-init session reviews = (setReviews reviews, session, Cmd.none)
+init session reviews =
+  ( { reviews = setReviews reviews, currentTime = Nothing }
+  , session
+  , Task.perform GotTime Time.now 
+  )
 
 view : Session.Data -> Model -> Element Msg
 view session model =
-  S.contentList <|
-    List.map (viewReviewAndComment session) model
+  case model.currentTime of
+    Just now ->
+      S.contentList <|
+        List.map (viewReviewAndComment session now) model.reviews
+    Nothing ->
+      S.contentList [ S.text "loading time..." ]
 
 update : Msg -> Model -> Session.Data -> (Model, Session.Data, Cmd Msg)
 update msg model session =
-  case msg of
+  case Debug.log "update: " msg of
     OnDelete review ->
       case session.userAndToken of
         Just uAndT ->
@@ -58,32 +72,53 @@ update msg model session =
           (model, session, Cmd.none)
     ReviewDeleted result ->
       case result of
-        Ok review -> (deleteReview review model, session, Cmd.none)
+        Ok review ->
+          ( { model | reviews = deleteReview review model.reviews}
+          , session
+          , Cmd.none
+          )
         Err _ -> (model, session, Cmd.none)
     ReviewLiked result ->
       case result of
-        Ok review -> (updateReview review model, session, Cmd.none)
+        Ok review ->
+          ( { model | reviews = updateReview review model.reviews }
+          , session
+          , Cmd.none
+          )
         Err _ -> (model, session, Cmd.none)
     ReviewDisliked result ->
       case result of
-        Ok review -> (updateReview review model, session, Cmd.none)
+        Ok review ->
+          ( { model | reviews = updateReview review model.reviews }
+          , session
+          , Cmd.none
+          )
         Err _ -> (model, session, Cmd.none)
     CommentSubmitted result ->
       case result of
-        Ok review -> (updateReview review model, session, Cmd.none)
+        Ok review ->
+          ( { model | reviews = updateReview review model.reviews }
+          , session
+          , Cmd.none
+          )
         Err _ -> (model, session, Cmd.none)
     OnReviewCommentChanged review newComment ->
-      (setComment review newComment model, session, Cmd.none)
+      ( { model | reviews = setComment review newComment model.reviews }
+      , session
+      , Cmd.none
+      )
+    GotTime posix ->
+      ({ model | currentTime = Just posix }, session, Cmd.none)
 
-setComment : Review -> String -> Model -> Model
+setComment : Review -> String -> List (Review, String) -> List (Review, String)
 setComment review newComment dict =
   setIf (\(r, c) -> r.id == review.id) (review, newComment) dict
 
-deleteReview : Review -> Model -> Model
+deleteReview : Review -> List (Review, String) -> List (Review, String)
 deleteReview review dict =
   List.filter (\(r, c) -> r.id /= review.id) dict
 
-updateReview : Review -> Model -> Model
+updateReview : Review -> List (Review, String) -> List (Review, String)
 updateReview review dict =
   setIf (\(r, c) -> r.id == review.id) (review, "") dict
 
@@ -96,20 +131,21 @@ setIf pred elem list =
         False -> x :: setIf pred elem xs
     [] -> []
 
-viewReviewAndComment : Session.Data -> (Review, String) -> Element Msg
-viewReviewAndComment session (review, newComment) =
+viewReviewAndComment : Session.Data -> Time.Posix -> (Review, String) -> Element Msg
+viewReviewAndComment session now (review, newComment) =
   S.viewReview
     (Maybe.map .user session.userAndToken)
     review
     newComment
+    now
     (OnDelete review)
     (OnLike review)
     (OnDislike review)
     (OnReviewCommentChanged review)
     (OnCommentSubmit review)
 
-setReviews : List Review -> Model
+setReviews : List Review -> List (Review, String)
 setReviews reviews = List.map (\r -> (r, "")) reviews
 
-addReview : Review -> Model -> Model
+addReview : Review -> List (Review, String) -> List (Review, String)
 addReview review model = (review, "") :: model

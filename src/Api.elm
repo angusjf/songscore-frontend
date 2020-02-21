@@ -53,6 +53,19 @@ postUser newUser msg =
       , expect = Http.expectJson msg userAndTokenDecoder
       }
 
+putUser : UserAndToken -> User -> (Result Http.Error UserAndToken -> msg) -> Cmd msg
+putUser uAndT user msg =
+  let
+    body =
+      Http.jsonBody <| User.encode user
+  in
+    Jwt.Http.put
+      uAndT.token
+      { url = apiRoot ++ "/users"
+      , body = body
+      , expect = Http.expectJson msg userAndTokenDecoder
+      }
+
 postLogin : Credentials -> (Result Http.Error UserAndToken -> msg) -> Cmd msg
 postLogin creds msg =
   let

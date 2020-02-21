@@ -12,6 +12,7 @@ type Route
   | Review String Int
   | Root
   | User String
+  | Settings
 
 goTo : Nav.Key -> Route -> Cmd msg
 goTo key route = Nav.pushUrl key (routeToString route)
@@ -25,6 +26,7 @@ routeParser =
     , map Review   <| s "users" </> string </> s "reviews" </> int
     , map Root     <| top
     , map User     <| s "users" </> string
+    , map Settings <| s "settings"
     ]
 
 fromUrl : Url -> Maybe Route
@@ -42,3 +44,4 @@ routeToPieces route =
     Review username id -> [ "users", username, "reviews", String.fromInt id ]
     Login -> [ "login" ]
     Root -> [ "" ]
+    Settings -> [ "settings" ]

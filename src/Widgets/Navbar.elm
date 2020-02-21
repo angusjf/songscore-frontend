@@ -15,6 +15,7 @@ type Msg
  | OnSignupClicked
  | OnUserClicked
  | OnLogoutClicked
+ | OnSettingsClicked
 
 update : Msg -> Session.Data -> (Session.Data, Cmd msg)
 update msg session =
@@ -38,6 +39,8 @@ update msg session =
           , Session.store Nothing
           ]
       )
+    OnSettingsClicked ->
+      (session, Route.goTo session.key Route.Settings)
 
 view : (Msg -> msg) -> Session.Data -> E.Element msg
 view toOuter session =
@@ -74,6 +77,7 @@ view toOuter session =
                         ]
                     Nothing -> S.text user.username
               }
+            , S.buttonAlt "Settings" <| Just <| toOuter OnSettingsClicked
             , S.buttonAlt "Log out" <| Just <| toOuter OnLogoutClicked
             ]
           Nothing ->

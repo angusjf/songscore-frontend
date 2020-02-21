@@ -27,15 +27,26 @@ type Msg
 init : Session.Data -> (Model, Session.Data, Cmd Msg)
 init session =
   let
-    (rl, _, _) = RL.init session []
+    (rl, rlSession, rlCmd) = RL.init session []
     model =
       { nrf = NRF.init NRFMsg OnNRFSubmitPressed
       , feed = rl
       }
   in
     case session.userAndToken of
-      Just uAndT -> (model, session, Api.getFeed uAndT GotFeed)
-      Nothing -> (model, session, Route.goTo session.key Route.Login)
+      Just uAndT ->
+        ( model
+        , session
+        , Cmd.batch
+            [ Api.getFeed uAndT GotFeed
+            , Cmd.map RLMsg rlCmd
+            ]
+        )
+      Nothing ->
+        ( model
+        , session
+        , Route.goTo session.key Route.Login
+        )
 
 update : Msg -> Model -> Session.Data -> (Model, Session.Data, Cmd Msg)
 update msg model session =
@@ -52,23 +63,31 @@ update msg model session =
     GotNewReview result -> 
       case result of
         Ok review ->
-          ( { model
-              | feed = RL.addReview review model.feed
-              , nrf = NRF.init NRFMsg OnNRFSubmitPressed
-            }
-          , session
-          , Cmd.none
-          )
+          let
+            feed = model.feed
+            newFeed = { feed | reviews = RL.addReview review model.feed.reviews }
+          in
+            ( { model
+                | feed = newFeed
+                , nrf = NRF.init NRFMsg OnNRFSubmitPressed
+              }
+            , session
+            , Cmd.none
+            )
         Err _ -> (model, session, Cmd.none)
     GotFeed result ->
       case result of 
         Ok reviews ->
-          ( { model
-              | feed = RL.setReviews reviews
-            }
-          , session
-          , Cmd.none
-          )
+          let
+            feed = model.feed
+            newFeed = { feed | reviews = RL.setReviews reviews}
+          in
+            ( { model
+                | feed = newFeed
+              }
+            , session
+            , Cmd.none
+            )
         Err _ -> (model, session, Cmd.none)
     NRFMsg nrfMsg ->
       let 

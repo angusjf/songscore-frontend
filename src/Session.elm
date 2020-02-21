@@ -16,8 +16,4 @@ create uAndT key =
     , key = key
     }
 
---decoder : D.Decoder
---decoder =
---  D.maybe <| D.map2 UserAndToken (D.field "" D.)
-
 port store : Maybe UserAndToken -> Cmd msg

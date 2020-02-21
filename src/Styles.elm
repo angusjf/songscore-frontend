@@ -10,6 +10,8 @@ import User exposing (User)
 import Review exposing (Review)
 import Browser
 import List.Extra exposing (unique)
+import Time
+import DateFormat.Relative
 
 --main =
 --  Browser.sandbox
@@ -319,6 +321,7 @@ userBox username image =
     , Background.color veryLightAlpha
     , E.paddingEach { top = 0, left = 0, right = 6, bottom = 0 }
     , roundedSmall
+    , E.alignTop
     ]
     { url = "/users/" ++ username
     , label =
@@ -377,10 +380,10 @@ spotifyLink spotifyId =
 -----------------------------------------------------
 
 type Kind = Mine | Yours | Guest
-viewReview : Maybe User -> Review -> String
+viewReview : Maybe User -> Review -> String -> Time.Posix
              -> msg -> msg -> msg -> (String -> msg) -> (String -> msg) -> Element msg
-viewReview maybeUser review newComment onDelete
-          onLike onDislike onCommentChanged onCommentPost =
+viewReview maybeUser review newComment now
+     onDelete onLike onDislike onCommentChanged onCommentPost =
   let
     comments = List.map (\c -> (c.user, c.text)) review.comments
     newCommentBox =
@@ -412,7 +415,7 @@ viewReview maybeUser review newComment onDelete
         ]
         [ userBox review.user.username review.user.image
         , reviewTextBox review.text
-        , text <| Maybe.withDefault "" <| Maybe.map longAgo review.createdAt
+        , text <| Maybe.withDefault "" <| Maybe.map (longAgo now) review.createdAt
         ]
     rvw
       = E.row
@@ -502,9 +505,10 @@ viewReview maybeUser review newComment onDelete
         , commentsBox comments
         ]
 
-longAgo : Int -> String
-longAgo millis =
-    (String.fromFloat ((toFloat millis) / 60 / 60 / 1000)) ++ " hours ago"
+longAgo : Time.Posix -> Int -> String
+longAgo now createdAt =
+    DateFormat.Relative.relativeTime now (Time.millisToPosix createdAt)
+
 
 -------------------------
 

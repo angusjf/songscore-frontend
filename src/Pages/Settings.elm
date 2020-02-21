@@ -11,11 +11,16 @@ import Session
 import Route
 import Styles as S
 import User exposing (User)
+import File
+import Task
+import File.Select as Select
 
 type alias Model =
   { usernameAvailable : Maybe Bool
   , newUsername : String
   , feedback : String
+  , profilePicture : String
+  , oldUsername : String
   }
 
 type Msg
@@ -23,22 +28,30 @@ type Msg
   | SaveClicked
   | GotChangedUser (Result Http.Error Api.UserAndToken)
   | GotUsernameAvailable (Result Http.Error Bool)
+  | ProfilePicturePressed
+  | OnImageSelected File.File
+  | ImageDecoded String
 
 init : Session.Data -> (Model, Session.Data, Cmd Msg)
 init session =
   let
+    oldUsername =
+      Maybe.withDefault "not logged in :(" <|
+        Maybe.map (\x -> x.user.username) session.userAndToken
     model =
       { usernameAvailable = Nothing
-      , newUsername =
-          Maybe.withDefault "not logged in :(" <|
-            Maybe.map (\x -> x.user.username) session.userAndToken
+      , newUsername = oldUsername
       , feedback = ""
+      , profilePicture =
+          Maybe.withDefault "/assets/images/default-user.png" <|
+            Maybe.andThen (\x -> x.user.image) session.userAndToken
+      , oldUsername = oldUsername
       }
   in
     (model, session, Cmd.none)
 
 view : Session.Data -> Model -> Page Msg
-view s model = 
+view session model = 
   { title = "Settings"
   , body =
       E.column [ S.spacingMedium ]
@@ -55,6 +68,13 @@ view s model =
                Just False -> S.text "not available :("
                Nothing    -> S.text ""
             ]
+        , E.column [ S.spacingMedium ]
+          [ E.image [ E.width (E.px 128) ]
+              { src = model.profilePicture
+              , description = "profile picture"
+              }
+          , S.button "upload new picture" <| Just ProfilePicturePressed
+          ]
         , S.button "save!" <| Just SaveClicked
         , S.text <| model.feedback
         ]
@@ -64,10 +84,16 @@ update : Msg -> Model -> Session.Data -> (Model, Session.Data, Cmd Msg)
 update msg model session =
   case msg of
     UsernameChanged new ->
-      ( { model | newUsername = new, usernameAvailable = Nothing }
-      , session
-      , Api.getUsernameAvailability new GotUsernameAvailable
-      )
+      if new /= model.oldUsername then
+        ( { model | newUsername = new, usernameAvailable = Nothing }
+        , session
+        , Api.getUsernameAvailability new GotUsernameAvailable
+        )
+      else 
+        ( { model | newUsername = new, usernameAvailable = Nothing }
+        , session
+        , Cmd.none
+        )
     SaveClicked ->
       let
         cmd = 
@@ -75,7 +101,11 @@ update msg model session =
             Just uAndT ->
               let
                 oldUser = uAndT.user
-                newUser = { oldUser | username = model.newUsername }
+                newUser =
+                  { oldUser
+                    | username = model.newUsername
+                    , image = Just model.profilePicture
+                  }
               in
                 Api.putUser uAndT newUser GotChangedUser
             Nothing ->
@@ -97,3 +127,9 @@ update msg model session =
           ({ model | usernameAvailable = Just bool }, session, Cmd.none)
         Err _ ->
           (model, session, Cmd.none)
+    ProfilePicturePressed ->
+      (model, session, Select.file ["image/jpeg", "image/png"] OnImageSelected)
+    OnImageSelected file ->
+      (model, session, Task.perform ImageDecoded (File.toUrl file))
+    ImageDecoded url ->
+      ({ model | profilePicture = url }, session, Cmd.none)

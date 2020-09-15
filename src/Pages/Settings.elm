@@ -84,7 +84,7 @@ update : Msg -> Model -> Session.Data -> (Model, Session.Data, Cmd Msg)
 update msg model session =
   case msg of
     UsernameChanged new ->
-      if new /= model.oldUsername then
+      if new /= model.oldUsername && String.length new > 1 then
         ( { model | newUsername = new, usernameAvailable = Nothing }
         , session
         , Api.getUsernameAvailability new GotUsernameAvailable
@@ -115,10 +115,13 @@ update msg model session =
     GotChangedUser result ->
       case result of
         Ok changedUAndT ->
-          ( { model | feedback = "Saved!" }
-          , { session | userAndToken = Just changedUAndT }
-          , Session.store <| Just changedUAndT
-          )
+          let
+            newSession = { session | userAndToken = Just changedUAndT }
+          in
+            ( { model | feedback = "Saved!" }
+            , newSession
+            , Session.store newSession
+            )
         Err _ ->
           ({ model | feedback = "error saving :(" }, session, Cmd.none)
     GotUsernameAvailable result ->
@@ -126,10 +129,11 @@ update msg model session =
         Ok bool ->
           ({ model | usernameAvailable = Just bool }, session, Cmd.none)
         Err _ ->
-          (model, session, Cmd.none)
+          ({ model | feedback = "error checking username :(" }, session, Cmd.none)
     ProfilePicturePressed ->
       (model, session, Select.file ["image/jpeg", "image/png"] OnImageSelected)
     OnImageSelected file ->
       (model, session, Task.perform ImageDecoded (File.toUrl file))
     ImageDecoded url ->
       ({ model | profilePicture = url }, session, Cmd.none)
+

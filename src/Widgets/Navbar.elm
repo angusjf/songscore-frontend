@@ -8,6 +8,8 @@ import Styles as S
 import Element.Font as Font
 import Route
 import Session
+import Api exposing (UserAndToken)
+import Http
 
 type Msg
  = OnLogoClicked
@@ -16,72 +18,113 @@ type Msg
  | OnUserClicked
  | OnLogoutClicked
  | OnSettingsClicked
+ | OnNotificationsClicked
 
-update : Msg -> Session.Data -> (Session.Data, Cmd msg)
-update msg session =
+type alias Model = ()
+
+init : Maybe UserAndToken -> (Model, Cmd Msg)
+init userAndToken = 
+  let
+    model = ()
+  in
+    (model, Cmd.none)
+
+update : Msg -> Model -> Session.Data -> (Model, Session.Data, Cmd Msg)
+update msg model session =
   case msg of
     OnLogoClicked ->
-      (session, Route.goTo session.key Route.Feed)
+      (model, session, Route.goTo session.key Route.Feed)
     OnSignupClicked ->
-      (session, Route.goTo session.key Route.Register)
+      (model, session, Route.goTo session.key Route.Register)
     OnLoginClicked ->
-      (session, Route.goTo session.key Route.Login)
+      (model, session, Route.goTo session.key Route.Login)
     OnUserClicked ->
       case session.userAndToken of
         Just uAndT ->
-          (session, Route.goTo session.key (Route.User uAndT.user.username))
+          (model, session, Route.goTo session.key (Route.User uAndT.user.username))
         Nothing ->
-          (session, Cmd.none)
+          (model, session, Cmd.none)
     OnLogoutClicked ->
-      ( { session | userAndToken = Nothing }
+      ( model
+      , { session | userAndToken = Nothing }
       , Cmd.batch
           [ Route.goTo session.key Route.Root
-          , Session.store Nothing
+          , Session.store { session | userAndToken = Nothing }
           ]
       )
     OnSettingsClicked ->
-      (session, Route.goTo session.key Route.Settings)
+      (model, session, Route.goTo session.key Route.Settings)
+    OnNotificationsClicked ->
+      ( model
+      , session
+      , Route.goTo session.key Route.Notifications
+      )
 
-view : (Msg -> msg) -> Session.Data -> E.Element msg
-view toOuter session =
-  E.row
-    [ E.height E.shrink
-    , E.width E.fill
-    , E.spaceEvenly
-    , Background.color S.red
-    , S.paddingMixedMedium
-    ]
-    [ S.buttonAlt "Home" <| Just <| toOuter OnLogoClicked
-    , E.row [ E.alignRight , S.spacingMedium ] <|
-        case Maybe.map .user session.userAndToken of
-          Just user ->
-            [ Input.button
-              [ E.alignRight
-              , S.spacingMedium
-              , Background.color S.white
-              , Font.color S.red
-              , Font.bold
-              , S.paddingSmall
-              , S.roundedSmall
+view : Session.Data -> Model -> E.Element Msg
+view session model =
+  let
+    home = S.buttonIcon "fas fa-star" <| Just <| OnLogoClicked
+    notifs =
+        E.row
+            [S.spacingMedium] <|
+            [ S.buttonIcon "fas fa-bell" (Just OnNotificationsClicked)
+            ] ++
+            ( if Maybe.withDefault False session.unreadNotifications
+                then [S.textAlt "(new)"]
+                else [] )
+          
+    profile user =
+      Input.button
+        [ E.alignRight
+        , S.spacingMedium
+        , Background.color S.white
+        , Font.color S.red
+        , Font.bold
+        , S.paddingSmall
+        , S.roundedSmall
+        ]
+        { onPress = Just <| OnUserClicked
+        , label = 
+            case user.image of
+              Just image ->
+                E.row [S.spacingSmall]
+                  [ E.image [ E.width (E.px 32) ]
+                      { src = image
+                      , description = "profile picture"
+                      }
+                  , S.text user.username
+                  ]
+              Nothing -> S.text user.username
+        }
+    settings = S.buttonIcon "fas fa-cog" <| Just <| OnSettingsClicked
+    logout = S.buttonAlt "Log out" <| Just <| OnLogoutClicked
+    login = S.buttonAlt "Log in" <| Just <| OnLoginClicked
+    signup = S.buttonAlt "Sign Up" <| Just <| OnSignupClicked
+  in
+    E.row
+      [ E.height E.shrink
+      , E.width E.fill
+      , E.centerX
+      , E.spaceEvenly
+      , Background.color S.red
+      , S.paddingMixedMedium
+      , S.spacingMedium
+      , S.lightShadow
+      ] <|
+      case Maybe.map .user session.userAndToken of
+        Just user ->
+          [ home
+          , notifs
+          , E.row [ E.alignRight, S.spacingMedium ]
+              [ profile user
+              , settings
+              , logout
               ]
-              { onPress = Just <| toOuter OnUserClicked
-              , label = 
-                  case user.image of
-                    Just image ->
-                      E.row [S.spacingSmall]
-                        [ E.image [ E.width (E.px 32) ]
-                            { src = image
-                            , description = "profile picture"
-                            }
-                        , S.text user.username
-                        ]
-                    Nothing -> S.text user.username
-              }
-            , S.buttonAlt "Settings" <| Just <| toOuter OnSettingsClicked
-            , S.buttonAlt "Log out" <| Just <| toOuter OnLogoutClicked
-            ]
-          Nothing ->
-            [ S.buttonAlt "Log in" <| Just <| toOuter OnLoginClicked
-            , S.buttonAlt "Sign Up" <| Just <| toOuter OnSignupClicked
-            ]
-    ]
+          ]
+        Nothing ->
+          [ home
+          , E.row [ E.alignRight, S.spacingMedium ]
+              [ login
+              , signup
+              ]
+          ]

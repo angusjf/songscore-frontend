@@ -5,14 +5,14 @@ import Json.Encode as E
 import Json.Decode as D
 import User exposing (User)
 import Review exposing (Review)
+import Notification exposing (Notification)
 import Jwt.Http
 import Url.Builder as Builder
 
 apiRoot : String
 apiRoot = "/api"
--------- "https://songscore.herokuapp.com"
--------- "http://localhost:8081"
--------- ""
+--------- "https://songscore.herokuapp.com"
+--------- "http://localhost:8081/api"
 
 type alias Credentials =
   { username : String
@@ -219,3 +219,28 @@ subjectResultsDecoder =
        (D.at ["album", "images"] <| D.index 2 <| D.field "url" D.string)
        (D.field "type" D.string)
        (D.field "id" D.string)
+
+getNotifications : UserAndToken -> (Result Http.Error (List Notification) -> msg) -> Cmd msg
+getNotifications uAndT msg =
+  Jwt.Http.get
+    uAndT.token
+    { url = apiRoot ++ "/notifications"
+    , expect = Http.expectJson msg (D.list Notification.decoder)
+    }
+
+getNewNotifications : UserAndToken -> (Result Http.Error Bool -> msg) -> Cmd msg
+getNewNotifications uAndT msg =
+  Jwt.Http.get
+    uAndT.token
+    { url = apiRoot ++ "/notifications/new"
+    , expect = Http.expectJson msg D.bool
+    }
+
+postNotifications : UserAndToken -> (Result Http.Error (List Notification) -> msg) -> Cmd msg
+postNotifications uAndT msg =
+  Jwt.Http.post
+    uAndT.token
+    { url = apiRoot ++ "/notifications"
+    , body = Http.emptyBody
+    , expect = Http.expectJson msg (D.list Notification.decoder)
+    }

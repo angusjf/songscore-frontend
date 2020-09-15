@@ -1,8 +1,10 @@
 module Review exposing (..)
 
+import Time
 import Json.Decode as D
 import Json.Encode as E
 import Json.Decode.Pipeline as P
+import Iso8601
 import Subject exposing (Subject)
 import User exposing (User)
 
@@ -15,7 +17,7 @@ type alias Review =
   , comments : List Comment
   , likes : List User
   , dislikes : List User
-  , createdAt : Maybe Int
+  , insertedAt : Time.Posix
   }
 
 type alias Comment =
@@ -35,7 +37,7 @@ decoder =
     |> P.required "comments" (D.list decodeComment)
     |> P.required "likes" (D.list User.decoder)
     |> P.required "dislikes" (D.list User.decoder)
-    |> P.required "createdAt" (D.nullable D.int)
+    |> P.required "inserted_at" Iso8601.decoder
 
 decodeComment : D.Decoder Comment
 decodeComment =
@@ -55,10 +57,6 @@ encode review =
       case review.text of
         Just x -> E.string x
         Nothing -> E.null
-    createdAt =
-      case review.createdAt of
-        Just c -> E.int c
-        Nothing -> E.null
   in
     E.object
       [ ("id", id)
@@ -69,7 +67,7 @@ encode review =
       , ("likes", (E.list User.encode review.likes))
       , ("dislikes", (E.list User.encode review.dislikes))
       , ("comment", (E.list encodeComment review.comments))
-      , ("createdAt", createdAt)
+      , ("inserted_at", Iso8601.encode review.insertedAt)
       ]
 
 encodeComment : Comment -> E.Value

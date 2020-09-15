@@ -12,7 +12,6 @@ import Task
 
 type alias Model = 
   { reviews : List (Review, String)
-  , currentTime : Maybe Time.Posix
   }
 
 type Msg
@@ -25,27 +24,22 @@ type Msg
   | ReviewDisliked (Result Http.Error Review)
   | CommentSubmitted (Result Http.Error Review)
   | OnReviewCommentChanged Review String
-  | GotTime Time.Posix
 
 init : Session.Data -> List Review -> (Model, Session.Data, Cmd Msg)
 init session reviews =
-  ( { reviews = setReviews reviews, currentTime = Nothing }
+  ( { reviews = setReviews reviews }
   , session
-  , Task.perform GotTime Time.now 
+  , Cmd.none
   )
 
 view : Session.Data -> Model -> Element Msg
 view session model =
-  case model.currentTime of
-    Just now ->
-      S.contentList <|
-        List.map (viewReviewAndComment session now) model.reviews
-    Nothing ->
-      S.contentList [ S.text "loading time..." ]
+  S.contentList <|
+    List.map (viewReviewAndComment session) model.reviews
 
 update : Msg -> Model -> Session.Data -> (Model, Session.Data, Cmd Msg)
 update msg model session =
-  case Debug.log "update: " msg of
+  case msg of
     OnDelete review ->
       case session.userAndToken of
         Just uAndT ->
@@ -77,7 +71,7 @@ update msg model session =
           , session
           , Cmd.none
           )
-        Err _ -> (model, session, Cmd.none)
+        Err e -> Debug.todo <| Debug.toString e
     ReviewLiked result ->
       case result of
         Ok review ->
@@ -85,7 +79,7 @@ update msg model session =
           , session
           , Cmd.none
           )
-        Err _ -> (model, session, Cmd.none)
+        Err e -> Debug.todo <| Debug.toString e
     ReviewDisliked result ->
       case result of
         Ok review ->
@@ -93,7 +87,7 @@ update msg model session =
           , session
           , Cmd.none
           )
-        Err _ -> (model, session, Cmd.none)
+        Err e -> Debug.todo <| Debug.toString e
     CommentSubmitted result ->
       case result of
         Ok review ->
@@ -101,14 +95,12 @@ update msg model session =
           , session
           , Cmd.none
           )
-        Err _ -> (model, session, Cmd.none)
+        Err e -> Debug.todo <| Debug.toString e
     OnReviewCommentChanged review newComment ->
       ( { model | reviews = setComment review newComment model.reviews }
       , session
       , Cmd.none
       )
-    GotTime posix ->
-      ({ model | currentTime = Just posix }, session, Cmd.none)
 
 setComment : Review -> String -> List (Review, String) -> List (Review, String)
 setComment review newComment dict =
@@ -131,13 +123,13 @@ setIf pred elem list =
         False -> x :: setIf pred elem xs
     [] -> []
 
-viewReviewAndComment : Session.Data -> Time.Posix -> (Review, String) -> Element Msg
-viewReviewAndComment session now (review, newComment) =
+viewReviewAndComment : Session.Data -> (Review, String) -> Element Msg
+viewReviewAndComment session (review, newComment) =
   S.viewReview
     (Maybe.map .user session.userAndToken)
     review
     newComment
-    now
+    session.currentTime
     (OnDelete review)
     (OnLike review)
     (OnDislike review)

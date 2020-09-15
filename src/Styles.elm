@@ -6,31 +6,19 @@ import Element.Border as Border
 import Element.Input as Input
 import Element.Font as Font
 import Html
+import Html.Events
+import Html.Attributes
 import User exposing (User)
 import Review exposing (Review)
 import Browser
 import List.Extra exposing (unique)
 import Time
 import DateFormat.Relative
-
---main =
---  Browser.sandbox
---    { init = ()
---    , view =
---      \model ->
---        E.layout [E.height E.shrink, E.width E.shrink] <|
---          subjectBox
---            { artist = "Denzel Curry & Kenny Beats"
---            , title = "Lay_Up.m4a"
---            , image = "data:image/jpeg;base64,/9j/2wCEAAgGBgcGBQgHBwcJ"
---            }
---
---    , update = \msg model -> model
---    }
+import Json.Decode as D
 
 red = E.rgb 1.0 0.4 0.4
 white = E.rgb 1.0 1.0 1.0
-veryLightAlpha = E.rgba 0 0 0 0.1
+veryLightAlpha = E.rgba 0 0 0 0.15
 background = E.rgb 1 1 1
 spotifyGreen = E.rgb255 18 208 88
 
@@ -80,6 +68,18 @@ buttonAlt str action =
     , label = text str
     }
 
+buttonIcon name action =
+  Input.button
+    [ Background.color white
+    , Font.color red
+    , Font.bold
+    , paddingSmall
+    , roundedSmall
+    ]
+    { onPress = action
+    , label = icon name
+    }
+
 labelSmall str =
   Input.labelAbove [] (textSmall str)
 
@@ -88,17 +88,11 @@ textSmall str = E.el [ Font.size 16 ] (E.text str)
 borderSmall = Border.width 3
 
 squareMedium =
---  [ E.width (E.maximum 200 E.fill)
---  , E.height (E.maximum 200 E.fill)
---  ]
   [ E.width (px 140)
   , E.height (px 140)
   ]
 
 squareTiny =
---  [ E.width (E.maximum 200 E.fill)
---  , E.height (E.maximum 200 E.fill)
---  ]
   [ E.width (px 64)
   , E.height (px 64)
   ]
@@ -117,8 +111,7 @@ lightShadow =
     , color = veryLightAlpha
     }
 
-{-
-onEnter : msg -> Element.Attribute msg
+onEnter : msg -> E.Attribute msg
 onEnter msg =
   let
    decoder = D.string |> D.andThen checkEnter
@@ -126,10 +119,9 @@ onEnter msg =
                       then D.succeed msg
                       else D.fail "Not the enter key"
   in
-    Element.htmlAttribute <|
+    E.htmlAttribute <|
       Html.Events.on "keyup" <|
         D.field "key" decoder
-        -}
 
 ----- now for something different
 
@@ -137,11 +129,15 @@ skeleton : Element msg -> Element msg -> Html.Html msg
 skeleton bar body =
   E.layout [ E.width E.fill, Background.color background ] <|
     E.column
-      [ E.width (E.maximum 1000 E.fill)
-      , E.centerX
+      [ E.width (E.minimum 530 E.fill)
       ]
       [ bar
-      , E.el [ E.padding 8 ] body
+      , E.el
+        [ E.padding 8
+        , E.centerX
+        , E.width (E.px 550)
+        ]
+        body
       ]
 
 loading : Maybe a -> (a -> Element msg) -> Element msg
@@ -222,15 +218,59 @@ dislikesBox usernames =
       [] ->
         ""
 
-outerBox elems =
-  E.column
-    [ lightShadow
-    , roundedSmall
-    , E.width (E.px 550)
-    ]
-    elems
+subjectBox { artist, title, image, spotifyId } =
+  let
+    attrs =
+      [ E.width (192 |> E.px)
+      , E.height (192 |> E.px)
+      , paddingMedium
+      , E.alignTop
+      , roundedTL
+      , Background.gradient
+          { angle = 3.14
+          , steps =
+            [ E.rgba 0 0 0 0.1
+            , E.rgba 0 0 0 0
+            , E.rgba 0 0 0 0
+            , E.rgba 0 0 0 0
+            ]
+          }
+      ]
+    spotify = spotifyLink spotifyId
+    shadowTextBig str = shadowText str 18
+    shadowTextSmall str = shadowText str 15
+    shadowText str n =
+      E.el
+        [ Font.shadow
+            { offset = (0, 0)
+            , blur = 3
+            , color = E.rgba 0 0 0 0.9
+            }
+        , Font.color white
+        , Font.italic
+        , Font.bold
+        , Font.size n
+        ] <|
+          E.paragraph [] [ E.text str ]
+  in
+    E.el
+      [ roundedTL
+      , Background.image image
+      , E.alignTop
+      ] <|
+      E.el
+        attrs <|
+        E.column
+          [ spacingSmall
+          , E.height E.fill
+          , E.width E.fill
+          ]
+          [ shadowTextBig title
+          , shadowTextSmall artist
+          , E.el [ E.alignBottom, E.alignLeft ] spotify
+          ]
 
-subjectBox { artist, title, image } =
+subjectResult { artist, title, image } =
   let
     attrs =
       [ E.width (192 |> E.px)
@@ -293,7 +333,7 @@ commentsBox comments =
   E.column
     [ Border.color veryLightAlpha
     , topLine
-    , E.width E.fill
+    --, E.width E.fill
     , paddingSmall
     ] <|
     List.map comment comments
@@ -367,17 +407,21 @@ spotifyLink spotifyId =
           , Font.bold
           , paddingSmall
           , roundedSmall
+          , lightShadow
           ] <|
-          textAlt "spotify!"
+          E.row [ spacingMedium ]
+            [ icon "fab fa-spotify"
+            , text " spotify"
+            ]
     }
 
------------------------------------------------------
--- **---****-----------------------------------------
---*----*-****----------------------------------------
---*----*---------------------------------------------
---*-----***------------------------------------------
------------------------------------------------------
------------------------------------------------------
+---------------
+-- **---****---
+--*----*-****--
+--*----*-------
+--*-----***----
+---------------
+---------------
 
 type Kind = Mine | Yours | Guest
 viewReview : Maybe User -> Review -> String -> Time.Posix
@@ -390,33 +434,25 @@ viewReview maybeUser review newComment now
       E.row
         [ paddingSmall
         , spacingMedium
-        , E.width E.fill
+        --, E.width E.fill
         ]
         [ Input.text
-          [ E.width E.fill
-          , E.height (E.px 38)
-          ]
-          { label = Input.labelHidden "comment"
-          , onChange = onCommentChanged
-          , placeholder =
-              Just <| Input.placeholder [Font.size 14] <|
-                  E.text "leave a comment..."
-          , text = newComment
-          }
+            [ E.width E.fill
+            , E.height (E.px 38)
+            , Font.size 16
+            ]
+            { label = Input.labelHidden "comment"
+            , onChange = onCommentChanged
+            , placeholder =
+                Just <| Input.placeholder [Font.size 14] <|
+                    E.text "leave a comment..."
+            , text = newComment
+            }
         , button "post" <| Just (onCommentPost newComment)
         ]
-    spotify = spotifyLink review.subject.spotifyId
     likes = List.map (\u -> u.username) review.likes
     dislikes = List.map (\u -> u.username) review.dislikes
-    nameAndText =
-      E.column
-        [ E.alignTop
-        , spacingMedium
-        ]
-        [ userBox review.user.username review.user.image
-        , reviewTextBox review.text
-        , text <| Maybe.withDefault "" <| Maybe.map (longAgo now) review.createdAt
-        ]
+    nameAndText = reviewTextBox review.text
     rvw
       = E.row
           [ E.width E.fill
@@ -428,11 +464,12 @@ viewReview maybeUser review newComment now
               { artist = review.subject.artist
               , title = review.subject.title
               , image = review.subject.image
+              , spotifyId = review.subject.spotifyId
               }
           , E.column
               [ spacingMedium
               , E.alignTop
-              , E.width E.fill
+              --, E.width E.fill
               , E.height E.fill
               , paddingMedium
               ]
@@ -466,13 +503,15 @@ viewReview maybeUser review newComment now
                   [ spacingMedium
                   , E.alignBottom
                   , E.height (E.px 40)
-                  , E.width E.fill
-                  ] <|
-                  actions ++ [ spotify ]
+                  --, E.width E.fill
+                  ]
+                  actions
               ]
           ]
-    actions = 
-      case kind of
+    actions =
+      [ text <| longAgo now review.insertedAt
+      , userBox review.user.username review.user.image
+      ] ++ case kind of
         Mine ->
           [ deleteButton <| Just onDelete ]
         Yours ->
@@ -482,7 +521,7 @@ viewReview maybeUser review newComment now
         Guest ->
           []
     kind = 
-      case maybeUser of
+      case Debug.log "maybeUser: " maybeUser of
         Just user ->
           if user.id == review.user.id then
             -- MY POST
@@ -494,7 +533,11 @@ viewReview maybeUser review newComment now
           -- GUEST
           Guest
   in
-    outerBox <|
+    E.column
+      [ lightShadow
+      , roundedSmall
+      , E.width E.shrink
+      ] <|
       if List.isEmpty comments then
         [ rvw
         , newCommentBox
@@ -505,11 +548,15 @@ viewReview maybeUser review newComment now
         , commentsBox comments
         ]
 
-longAgo : Time.Posix -> Int -> String
-longAgo now createdAt =
-    DateFormat.Relative.relativeTime now (Time.millisToPosix createdAt)
-
+longAgo : Time.Posix -> Time.Posix -> String
+longAgo now insertedAt =
+    DateFormat.Relative.relativeTime now insertedAt
 
 -------------------------
-
-
+icon : String -> Element msg
+icon str =
+  E.html <|
+    Html.i
+      [ Html.Attributes.attribute "class" str
+      ]
+      []

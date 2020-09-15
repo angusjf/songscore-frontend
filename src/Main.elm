@@ -4,6 +4,15 @@ import Browser
 import Browser.Navigation as Nav
 import Url
 import Html
+import Time
+import Task
+import Element
+import Http
+import Session
+import Route
+import Page
+import Api exposing (UserAndToken)
+import Styles as S
 import Pages.Register as Register
 import Pages.Login as Login
 import Pages.Feed as Feed
@@ -11,15 +20,14 @@ import Pages.NotFound as NotFound
 import Pages.User as User
 import Pages.Review as Review
 import Pages.Settings as Settings
-import Session
-import Api exposing (UserAndToken)
-import Route
-import Page
+import Pages.Notifications as Notifications
 import Widgets.Navbar as Navbar
-import Styles as S exposing (skeleton)
-import Time
 
-type alias Model = { page : Page, session : Session.Data }
+type alias Model =
+  { page : Page
+  , session : Session.Data
+  , navbarModel : Navbar.Model
+  }
 
 type Page
   = NotFound
@@ -29,6 +37,7 @@ type Page
   | User User.Model
   | Review Review.Model
   | Settings Settings.Model
+  | Notifications Notifications.Model
 
 type Msg
   = LinkClicked Browser.UrlRequest
@@ -39,12 +48,43 @@ type Msg
   | UserMsg User.Msg
   | ReviewMsg Review.Msg
   | SettingsMsg Settings.Msg
+  | NotificationsMsg Notifications.Msg
   | NavbarMsg Navbar.Msg
   | None
+  | NewTime Time.Posix
+  | GotNewNotifications (Result Http.Error Bool)
 
-init : Maybe UserAndToken -> Url.Url -> Nav.Key -> (Model, Cmd Msg)
-init uAndT url key =
-  stepUrl url { page = NotFound, session = Session.create uAndT key }
+init : (Maybe UserAndToken, Int) -> Url.Url -> Nav.Key -> (Model, Cmd Msg)
+init (uAndT, millis) url key =
+  let
+    (nav, navCmd) = Navbar.init uAndT
+    initSession =
+      { userAndToken = uAndT
+      , key = key
+      , currentTime = Time.millisToPosix millis
+      , unreadNotifications = Nothing
+      }
+    start =
+      { page = NotFound
+      , session = initSession
+      , navbarModel = nav
+      }
+    (model, cmd) = stepUrl url start
+    cmds =
+      case uAndT of
+        Just ut ->
+          [ cmd
+          , Cmd.map NavbarMsg navCmd
+          , Api.getNewNotifications ut GotNewNotifications
+          , Task.perform NewTime Time.now
+          ]
+        Nothing ->
+          [ cmd
+          , Cmd.map NavbarMsg navCmd
+          , Task.perform NewTime Time.now
+          ]
+  in
+    (model, Cmd.batch cmds) 
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update message model =
@@ -88,8 +128,35 @@ update message model =
         Settings innerModel ->
           stepSettings model <| Settings.update msg innerModel model.session
         _ -> (model, Cmd.none)
+    NotificationsMsg msg ->
+      case model.page of
+        Notifications innerModel ->
+          stepNotifications model <| Notifications.update msg innerModel model.session
+        _ -> (model, Cmd.none)
     NavbarMsg msg ->
-      stepNavbar model <| Navbar.update msg model.session
+      stepNavbar model <| Navbar.update msg model.navbarModel model.session
+    NewTime now ->
+      let
+        oldSession = model.session
+        newSession = { oldSession | currentTime = now }
+      in
+        ({ model | session = newSession }, Cmd.none)
+    GotNewNotifications result ->
+      case result of
+        Ok unread ->
+          let
+            oldSession = model.session
+            newSession = { oldSession | unreadNotifications = Just unread }
+          in
+            ( { model | session = newSession }
+            , Cmd.none
+            )
+        Err _ ->
+          let
+            oldSession = model.session
+            loggedOut = { oldSession | userAndToken = Nothing }
+          in
+            ({ model | session = loggedOut }, Cmd.none)
 
 stepUrl : Url.Url -> Model -> (Model, Cmd Msg)
 stepUrl url model =
@@ -108,49 +175,63 @@ stepUrl url model =
       stepReview model (Review.init model.session username id)
     Just Route.Settings ->
       stepSettings model (Settings.init model.session)
+    Just Route.Notifications ->
+      stepNotifications model (Notifications.init model.session)
 
 stepRegister : Model -> (Register.Model, Session.Data, Cmd Register.Msg) -> (Model, Cmd Msg)
 stepRegister model (registerModel, session, registerCmd) =
-  ( { page = Register registerModel, session = session }
+  ( { model | page = Register registerModel, session = session }
   , Cmd.map RegisterMsg registerCmd
   )
 
 stepLogin : Model -> (Login.Model, Session.Data, Cmd Login.Msg) -> (Model, Cmd Msg)
 stepLogin model (loginModel, session, loginCmd) =
-  ( { page = Login loginModel, session = session }
+  ( { model | page = Login loginModel, session = session }
   , Cmd.map LoginMsg loginCmd
   )
 
 stepFeed : Model -> (Feed.Model, Session.Data, Cmd Feed.Msg) -> (Model, Cmd Msg)
 stepFeed model (feedModel, session, feedCmd) =
-  ( { page = Feed feedModel, session = session}
+  ( { model | page = Feed feedModel, session = session}
   , Cmd.map FeedMsg feedCmd
   )
 
 stepUser : Model -> (User.Model, Session.Data, Cmd User.Msg) -> (Model, Cmd Msg)
 stepUser model (userModel, session, userCmd) =
-  ( { page = User userModel, session = session }
+  ( { model | page = User userModel, session = session }
   , Cmd.map UserMsg userCmd
   )
 
 stepReview : Model -> (Review.Model, Session.Data, Cmd Review.Msg) -> (Model, Cmd Msg)
 stepReview model (reviewModel, session, reviewCmd) =
-  ( { page = Review reviewModel, session = session }
+  ( { model | page = Review reviewModel, session = session }
   , Cmd.map ReviewMsg reviewCmd
   )
 
 stepSettings : Model -> (Settings.Model, Session.Data, Cmd Settings.Msg) -> (Model, Cmd Msg)
 stepSettings model (settingsModel, session, settingsCmd) =
-  ( { page = Settings settingsModel, session = session }
+  ( { model | page = Settings settingsModel, session = session }
   , Cmd.map SettingsMsg settingsCmd
   )
 
-stepNavbar : Model -> (Session.Data, Cmd Msg) -> (Model, Cmd Msg)
-stepNavbar model (session, cmd) = ({ model | session = session }, cmd)
+stepNotifications : Model -> (Notifications.Model, Session.Data, Cmd
+          Notifications.Msg) -> (Model, Cmd Msg)
+stepNotifications model (notificationsModel, session, notificationsCmd) =
+  ( { model | page = Notifications notificationsModel, session = session }
+  , Cmd.map NotificationsMsg notificationsCmd
+  )
+
+stepNavbar : Model -> (Navbar.Model, Session.Data, Cmd Navbar.Msg) -> (Model, Cmd Msg)
+stepNavbar model (navbarModel, session, navbarCmd) =
+  ( { model | session = session, navbarModel = navbarModel }
+  , Cmd.map NavbarMsg navbarCmd
+  )
 
 view : Model -> Browser.Document Msg
 view model =
   let
+    bar = Element.map NavbarMsg <|
+            Navbar.view model.session model.navbarModel
     { title, body } =
       case model.page of
         Register innerModel ->
@@ -167,16 +248,20 @@ view model =
           Page.map ReviewMsg <| Review.view model.session innerModel
         Settings innerModel ->
           Page.map SettingsMsg <| Settings.view model.session innerModel
-    bar = Navbar.view NavbarMsg model.session
+        Notifications innerModel ->
+          Page.map NotificationsMsg <| Notifications.view model.session innerModel
   in
     { title = "SongScore: " ++ title
     , body = [ S.skeleton bar body ]
     }
 
-subscriptions : a -> Sub Msg
-subscriptions _ = Sub.none
+subscriptions : Model -> Sub Msg
+subscriptions model =
+  Sub.batch
+    [ Time.every 3500 NewTime
+    ]
 
-main : Program (Maybe UserAndToken) Model Msg
+main : Program (Maybe UserAndToken, Int) Model Msg
 main =
   Browser.application
     { init = init

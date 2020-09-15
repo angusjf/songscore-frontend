@@ -63,8 +63,8 @@ update msg model session =
             , session
             , Cmd.none
             )
-        Err _ ->
-          (model, session, Cmd.none)
+        Err e ->
+          Debug.todo <| Debug.toString e
     ReviewListMsg rlMsg ->
       stepReviewList model <|
         ReviewList.update rlMsg model.reviewListModel session

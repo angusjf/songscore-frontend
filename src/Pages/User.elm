@@ -51,7 +51,7 @@ update : Msg -> Model -> Session.Data -> (Model, Session.Data, Cmd Msg)
 update msg model session =
   case msg of 
     GotReviews result ->
-      case Debug.log "GotResult" result of 
+      case result of 
         Ok reviews ->
           let
             reviewListModel = model.reviewListModel
@@ -63,8 +63,8 @@ update msg model session =
           , session
           , Cmd.none
           )
-        Err _ ->
-          (model, session, Cmd.none) -- TODO
+        Err e ->
+          Debug.todo <| Debug.toString e
     GotUser result ->
       case result of
         Ok user ->

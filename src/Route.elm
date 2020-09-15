@@ -13,6 +13,7 @@ type Route
   | Root
   | User String
   | Settings
+  | Notifications
 
 goTo : Nav.Key -> Route -> Cmd msg
 goTo key route = Nav.pushUrl key (routeToString route)
@@ -27,6 +28,7 @@ routeParser =
     , map Root     <| top
     , map User     <| s "users" </> string
     , map Settings <| s "settings"
+    , map Notifications <| s "notifications"
     ]
 
 fromUrl : Url -> Maybe Route
@@ -45,3 +47,4 @@ routeToPieces route =
     Login -> [ "login" ]
     Root -> [ "" ]
     Settings -> [ "settings" ]
+    Notifications -> [ "notifications" ]

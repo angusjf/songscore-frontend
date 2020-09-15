@@ -11,6 +11,7 @@ import Api
 import Http
 import Route
 import Styles as S
+import Time
 
 type alias Model = 
  { nrf : NRF.Form Msg
@@ -54,7 +55,7 @@ update msg model session =
     OnNRFSubmitPressed ->
       case session.userAndToken of
         Just uAndT -> 
-          case Debug.log "newReview: " <| NRF.convertToReview model.nrf uAndT.user of
+          case NRF.convertToReview session.currentTime model.nrf uAndT.user of
             Just newReview ->
               (model, session, Api.postReview uAndT newReview GotNewReview)
             Nothing -> 
@@ -74,7 +75,8 @@ update msg model session =
             , session
             , Cmd.none
             )
-        Err _ -> (model, session, Cmd.none)
+        Err _ ->
+          (model, { session | userAndToken = Nothing }, Cmd.none)
     GotFeed result ->
       case result of 
         Ok reviews ->
@@ -88,7 +90,8 @@ update msg model session =
             , session
             , Cmd.none
             )
-        Err _ -> (model, session, Cmd.none)
+        Err _ ->
+          (model, { session | userAndToken = Nothing }, Cmd.none)
     NRFMsg nrfMsg ->
       let 
         (nrfModel, cmd) = NRF.update nrfMsg model.nrf

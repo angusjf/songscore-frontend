@@ -38,7 +38,7 @@ init session =
 
 view : Model -> Page Msg
 view model = 
-  { title = "Register"
+  { title = "Log in"
   , body =
       E.column [ S.spacingMedium ]
         [ E.text ""
@@ -75,14 +75,13 @@ update msg model session =
       case result of
         Ok userAndToken ->
           let
-            oldSession = session
-            newSession = { oldSession | userAndToken = Just userAndToken }
+            newSession = { session | userAndToken = Just userAndToken }
           in
             ( model
             , newSession
             , Cmd.batch
                 [ Route.goTo session.key Route.Feed
-                , Session.store <| Just userAndToken
+                , Session.store newSession
                 ]
             )
         Err _ ->

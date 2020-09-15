@@ -22,7 +22,7 @@ decoder =
     (D.field "kind" subjectKindDecoder)
     (D.field "title" D.string)
     (D.field "artist" D.string)
-    (D.field "spotifyId" D.string)
+    (D.field "spotify_id" D.string)
 
 subjectKindDecoder : D.Decoder (SubjectKind)
 subjectKindDecoder = D.map toSubjectKind D.string
@@ -49,5 +49,5 @@ encode subject =
       , ("kind", kind)
       , ("title", E.string subject.title)
       , ("artist", E.string subject.artist)
-      , ("spotifyId", E.string subject.spotifyId)
+      , ("spotify_id", E.string subject.spotifyId)
       ]

@@ -94,7 +94,10 @@ update msg model session =
   case msg of
     UsernameChanged new ->
       ( { model | username = new }
-      , session, Api.getUsernameAvailability new GotUsernameAvailable
+      , session
+      , if String.length new > 1
+          then Api.getUsernameAvailability new GotUsernameAvailable
+          else Cmd.none
       )
     PasswordChanged new ->
       ({ model | password = new }, session, Cmd.none)
@@ -116,11 +119,11 @@ update msg model session =
             , newSession
             , Cmd.batch
                 [ Route.goTo session.key Route.Feed
-                , Session.store <| Just userAndToken
+                , Session.store newSession
                 ]
             )
-        Err _ ->
-            (model, session, Cmd.none) -- TODO handle
+        Err e ->
+            Debug.todo <| Debug.toString e
     ProfilePicturePressed ->
       (model, session, Select.file ["image/jpeg", "image/png"] OnImageSelected)
     OnImageSelected file ->

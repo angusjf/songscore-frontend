@@ -12,6 +12,7 @@ import Element.Input as Input
 import Styles as S
 import Http
 import Api
+import Time
 
 type Msg
   = OnTextChanged String
@@ -72,7 +73,8 @@ update msg model =
             }
           , Cmd.none
           )
-        Err results -> (model, Cmd.none)
+        Err e ->
+          Debug.todo <| Debug.toString e
     OnResultClicked track ->
       ({ model
          | subject = Just (resultToSubject track)
@@ -134,7 +136,7 @@ viewSubjectForm form =
     case form.subject of
       Just subject ->
         E.column [S.paddingSmall, E.width E.fill] <|
-          [ S.subjectBox
+          [ S.subjectResult
               { artist = subject.artist
               , title = subject.title
               , image = subject.image
@@ -212,8 +214,8 @@ viewMultiline form = E.el [ S.paddingSmall, E.width E.fill ] <|
     , spellcheck = True
     }
 
-convertToReview : Form msg -> User -> Maybe Review
-convertToReview form user =
+convertToReview : Time.Posix -> Form msg -> User -> Maybe Review
+convertToReview now form user =
   case (form.stars, form.subject) of
     (Just stars, Just subject) ->
       Just
@@ -225,6 +227,6 @@ convertToReview form user =
         , comments = []
         , likes = []
         , dislikes = []
-        , createdAt = Nothing
+        , insertedAt = now
         }
     (_, _) -> Nothing

@@ -4,7 +4,7 @@ import Session
 import Element as E exposing (Element)
 import Page exposing (Page)
 import Widgets.NewReviewForm as NRF
-import Widgets.ReviewList as RL
+import Widgets.ReviewList as RL exposing (ReviewList)
 import List exposing (map)
 import Review exposing (Review)
 import Api
@@ -15,7 +15,7 @@ import Time
 
 type alias Model = 
  { nrf : NRF.Form Msg
- , feed : RL.Model
+ , feed : ReviewList
  }
 
 type Msg
@@ -28,7 +28,7 @@ type Msg
 init : Session.Data -> (Model, Session.Data, Cmd Msg)
 init session =
   let
-    (rl, rlSession, rlCmd) = RL.init session []
+    (rl, rlSession, rlCmd) = RL.init session
     model =
       { nrf = NRF.init NRFMsg OnNRFSubmitPressed
       , feed = rl
@@ -66,7 +66,7 @@ update msg model session =
         Ok review ->
           let
             feed = model.feed
-            newFeed = { feed | reviews = RL.addReview review model.feed.reviews }
+            newFeed = RL.add review model.feed
           in
             ( { model
                 | feed = newFeed
@@ -80,16 +80,12 @@ update msg model session =
     GotFeed result ->
       case result of 
         Ok reviews ->
-          let
-            feed = model.feed
-            newFeed = { feed | reviews = RL.setReviews reviews}
-          in
-            ( { model
-                | feed = newFeed
-              }
-            , session
-            , Cmd.none
-            )
+          ( { model
+              | feed = RL.fromList reviews
+            }
+          , session
+          , Cmd.none
+          )
         Err _ ->
           (model, { session | userAndToken = Nothing }, Cmd.none)
     NRFMsg nrfMsg ->

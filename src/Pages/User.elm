@@ -14,7 +14,7 @@ import Route
 
 type alias Model = 
  { user : Maybe User
- , reviewListModel : ReviewList.Model
+ , reviewListModel : ReviewList.ReviewList
  }
 
 type Msg
@@ -25,7 +25,7 @@ type Msg
 init : Session.Data -> String -> (Model, Session.Data, Cmd Msg)
 init session username =
   let
-    (reviewListModel, rlSession, rlCmd) = ReviewList.init session []
+    (reviewListModel, rlSession, rlCmd) = ReviewList.init session
     model =
       { user = Nothing
       , reviewListModel = reviewListModel
@@ -40,7 +40,7 @@ init session username =
     )
 
 stepReviewList : Model ->
-                 (ReviewList.Model, Session.Data, Cmd ReviewList.Msg) ->
+                 (ReviewList.ReviewList, Session.Data, Cmd ReviewList.Msg) ->
                  (Model, Session.Data, Cmd Msg)
 stepReviewList model (reviewListModel, session, msg) =
   ( { model | reviewListModel = reviewListModel }
@@ -53,13 +53,7 @@ update msg model session =
     GotReviews result ->
       case result of 
         Ok reviews ->
-          let
-            reviewListModel = model.reviewListModel
-            newRLM = { reviewListModel | reviews = ReviewList.setReviews reviews }
-          in
-          ( { model
-              | reviewListModel = newRLM
-            }
+          ( { model | reviewListModel = ReviewList.fromList reviews }
           , session
           , Cmd.none
           )

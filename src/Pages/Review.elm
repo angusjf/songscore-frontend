@@ -8,10 +8,10 @@ import Element
 import Api
 import Http
 import Route
-import Widgets.ReviewList as ReviewList
+import Widgets.ReviewList as ReviewList exposing (ReviewList)
 
 type alias Model = 
- { reviewListModel : ReviewList.Model
+ { reviewListModel : ReviewList
  , review : Maybe Review
  }
 
@@ -22,7 +22,7 @@ type Msg
 init : Session.Data -> String -> Int -> (Model, Session.Data, Cmd Msg)
 init session username id =
   let
-    (reviewListModel, rlSession, rlCmd) = ReviewList.init session []
+    (reviewListModel, rlSession, rlCmd) = ReviewList.init session
     model =
       { reviewListModel = reviewListModel
       , review = Nothing
@@ -37,7 +37,7 @@ init session username id =
     )
 
 stepReviewList : Model ->
-                 (ReviewList.Model, Session.Data, Cmd ReviewList.Msg) ->
+                 (ReviewList, Session.Data, Cmd ReviewList.Msg) ->
                  (Model, Session.Data, Cmd Msg)
 stepReviewList model (reviewListModel, session, msg) =
   ( { model | reviewListModel = reviewListModel }
@@ -51,18 +51,13 @@ update msg model session =
     GotReview result ->
       case result of 
         Ok review ->
-          let
-            reviewListModel = model.reviewListModel
-            newRLM = { reviewListModel
-                        | reviews = ReviewList.setReviews [review] }
-          in
-            ({ model
-                | reviewListModel = newRLM
-                , review = Just review
-             }
-            , session
-            , Cmd.none
-            )
+          ({ model
+             | reviewListModel = ReviewList.fromList [review]
+             , review = Just review
+           }
+          , session
+          , Cmd.none
+          )
         Err e ->
           Debug.todo <| Debug.toString e
     ReviewListMsg rlMsg ->

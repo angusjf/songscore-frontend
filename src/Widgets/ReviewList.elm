@@ -1,4 +1,6 @@
-module Widgets.ReviewList exposing (..)
+module Widgets.ReviewList exposing ( ReviewList, init, view, update
+                                   , Msg, fromList, add
+                                   )
 
 import Element exposing (Element)
 import Styles as S
@@ -10,9 +12,7 @@ import Http
 import Time
 import Task
 
-type alias Model = 
-  { reviews : List (Review, String)
-  }
+type alias ReviewList = Maybe (List (Review, String))
 
 type Msg
   = OnDelete Review
@@ -20,24 +20,34 @@ type Msg
   | OnDislike Review
   | OnCommentSubmit Review String
   | ReviewDeleted (Result Http.Error Review)
-  | ReviewLiked (Result Http.Error Review)
-  | ReviewDisliked (Result Http.Error Review)
-  | CommentSubmitted (Result Http.Error Review)
+  | ReviewUpdated (Result Http.Error Review)
   | OnReviewCommentChanged Review String
 
-init : Session.Data -> List Review -> (Model, Session.Data, Cmd Msg)
-init session reviews =
-  ( { reviews = setReviews reviews }
+add : Review -> ReviewList -> ReviewList
+add review rl =
+  case rl of
+    Just reviews ->
+      Just <| (review, "") :: reviews
+    Nothing ->
+      fromList [review]
+
+init : Session.Data -> (ReviewList, Session.Data, Cmd Msg)
+init session =
+  ( Nothing
   , session
   , Cmd.none
   )
 
-view : Session.Data -> Model -> Element Msg
+view : Session.Data -> ReviewList -> Element Msg
 view session model =
-  S.contentList <|
-    List.map (viewReviewAndComment session) model.reviews
+  case model of
+    Just reviews ->
+      S.contentList <|
+        List.map (viewReviewAndComment session) reviews
+    Nothing ->
+      S.text "loading..."
 
-update : Msg -> Model -> Session.Data -> (Model, Session.Data, Cmd Msg)
+update : Msg -> ReviewList -> Session.Data -> (ReviewList, Session.Data, Cmd Msg)
 update msg model session =
   case msg of
     OnDelete review ->
@@ -49,55 +59,39 @@ update msg model session =
     OnLike review ->
       case session.userAndToken of
         Just uAndT ->
-          (model, session, Api.postLike uAndT review ReviewLiked)
+          (model, session, Api.postLike uAndT review ReviewUpdated)
         Nothing -> 
           (model, session, Cmd.none)
     OnDislike review ->
       case session.userAndToken of
         Just uAndT ->
-          (model, session, Api.postDislike uAndT review ReviewDisliked)
+          (model, session, Api.postDislike uAndT review ReviewUpdated)
         Nothing -> 
           (model, session, Cmd.none)
     OnCommentSubmit review comment ->
       case session.userAndToken of
         Just uAndT ->
-          (model, session, Api.postComment uAndT review comment CommentSubmitted)
+          (model, session, Api.postComment uAndT review comment ReviewUpdated)
         Nothing -> 
           (model, session, Cmd.none)
     ReviewDeleted result ->
       case result of
         Ok review ->
-          ( { model | reviews = deleteReview review model.reviews}
+          ( model |> Maybe.map (deleteReview review)
           , session
           , Cmd.none
           )
         Err e -> Debug.todo <| Debug.toString e
-    ReviewLiked result ->
+    ReviewUpdated result ->
       case result of
         Ok review ->
-          ( { model | reviews = updateReview review model.reviews }
-          , session
-          , Cmd.none
-          )
-        Err e -> Debug.todo <| Debug.toString e
-    ReviewDisliked result ->
-      case result of
-        Ok review ->
-          ( { model | reviews = updateReview review model.reviews }
-          , session
-          , Cmd.none
-          )
-        Err e -> Debug.todo <| Debug.toString e
-    CommentSubmitted result ->
-      case result of
-        Ok review ->
-          ( { model | reviews = updateReview review model.reviews }
+          ( model |> Maybe.map (updateReview review)
           , session
           , Cmd.none
           )
         Err e -> Debug.todo <| Debug.toString e
     OnReviewCommentChanged review newComment ->
-      ( { model | reviews = setComment review newComment model.reviews }
+      ( model |> Maybe.map (setComment review newComment)
       , session
       , Cmd.none
       )
@@ -136,8 +130,8 @@ viewReviewAndComment session (review, newComment) =
     (OnReviewCommentChanged review)
     (OnCommentSubmit review)
 
-setReviews : List Review -> List (Review, String)
-setReviews reviews = List.map (\r -> (r, "")) reviews
+fromList : List Review -> ReviewList
+fromList reviews = Just <| List.map (\r -> (r, "")) reviews
 
 addReview : Review -> List (Review, String) -> List (Review, String)
 addReview review model = (review, "") :: model
